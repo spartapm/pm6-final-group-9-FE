@@ -37,3 +37,12 @@ npm run dev
 - Business APIs call `guguletter-api` with Bearer access token.
 - Letter draft is persisted in zustand (`localStorage`) across login redirects.
 - Bottom navigation is shown on `/home` and `/write` (no receiver).
+
+## Deploy
+
+Vercel 배포 가이드: [DEPLOY.md](./DEPLOY.md)
+
+```bash
+# GitHub push (gh auth login 후)
+bash ../scripts/setup-github.sh
+```

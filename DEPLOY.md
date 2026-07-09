@@ -1,9 +1,6 @@
 # guguletter-web 배포 가이드 (Vercel)
 
-**Production URL:** `https://pm6-final-group-9-fe.vercel.app`  
-**API URL:** `https://pm6-final-group-9-be.onrender.com`
-
-## 1. GitHub
+## 1. GitHub 연결
 
 ```bash
 gh auth login
@@ -22,7 +19,7 @@ bash ../scripts/setup-github.sh
 |-----|-------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon public key |
-| `NEXT_PUBLIC_API_URL` | `https://pm6-final-group-9-be.onrender.com` |
+| `NEXT_PUBLIC_API_URL` | `https://<api>.onrender.com` |
 | `NEXT_PUBLIC_APP_URL` | `https://pm6-final-group-9-fe.vercel.app` |
 
 > 확정 URL 상세: [docs/production-urls.md](./docs/production-urls.md)
@@ -48,8 +45,8 @@ APP_URL=https://pm6-final-group-9-fe.vercel.app
 ## 6. 배포 검증
 
 ```bash
-API_URL=https://pm6-final-group-9-be.onrender.com \
-WEB_URL=https://pm6-final-group-9-fe.vercel.app \
+API_URL=https://<api>.onrender.com \
+WEB_URL=https://<vercel-domain>.vercel.app \
 bash ../scripts/verify-deploy.sh
 ```
 

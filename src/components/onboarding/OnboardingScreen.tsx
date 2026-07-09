@@ -77,12 +77,12 @@ export function OnboardingScreen() {
     });
 
     const supabase = createClient();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
-    const callbackUrl = `${appUrl}/auth/callback?next=${encodeURIComponent(target)}`;
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", target);
     await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
-        redirectTo: callbackUrl,
+        redirectTo: callbackUrl.toString(),
       },
     });
   }

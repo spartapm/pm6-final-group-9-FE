@@ -36,11 +36,12 @@ function LoginContent() {
     track("login_start", { login_type: "KAKAO", entry_path: path });
 
     const supabase = createClient();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", returnUrl ?? "/home");
     await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
-        redirectTo: `${appUrl}/auth/callback`,
+        redirectTo: callbackUrl.toString(),
       },
     });
   }

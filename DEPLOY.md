@@ -20,17 +20,17 @@ bash ../scripts/setup-github.sh
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon public key |
 | `NEXT_PUBLIC_API_URL` | `https://<api>.onrender.com` |
-| `NEXT_PUBLIC_APP_URL` | `https://<vercel-domain>.vercel.app` |
+| `NEXT_PUBLIC_APP_URL` | `https://pm6-final-group-9-fe.vercel.app` |
 
-> `NEXT_PUBLIC_APP_URL`은 Vercel 배포 후 확정된 Production URL 사용
+> 확정 URL 상세: [docs/production-urls.md](./docs/production-urls.md)
 
 ## 4. Supabase Redirect URL
 
 Supabase Dashboard → Authentication → URL Configuration:
 
-- **Site URL**: `https://<vercel-domain>.vercel.app`
+- **Site URL**: `https://pm6-final-group-9-fe.vercel.app`
 - **Redirect URLs** 추가:
-  - `https://<vercel-domain>.vercel.app/auth/callback`
+  - `https://pm6-final-group-9-fe.vercel.app/auth/callback`
   - `http://localhost:3000/auth/callback`
 
 ## 5. API CORS 동기화
@@ -38,8 +38,8 @@ Supabase Dashboard → Authentication → URL Configuration:
 Vercel URL 확정 후 Render API env 업데이트:
 
 ```
-CORS_ORIGIN=https://<vercel-domain>.vercel.app,http://localhost:3000
-APP_URL=https://<vercel-domain>.vercel.app
+CORS_ORIGIN=https://pm6-final-group-9-fe.vercel.app,http://localhost:3000
+APP_URL=https://pm6-final-group-9-fe.vercel.app
 ```
 
 ## 6. 배포 검증

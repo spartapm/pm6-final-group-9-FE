@@ -1,0 +1,9 @@
+<svg width="140" height="36" viewBox="0 0 140 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="18" cy="18" r="16" fill="white"/>
+  <circle cx="18" cy="17" r="9" fill="#E3F2FA" stroke="#4A9FD4" stroke-width="1.5"/>
+  <circle cx="14" cy="16" r="1.2" fill="#1E293B"/>
+  <circle cx="22" cy="16" r="1.2" fill="#1E293B"/>
+  <path d="M14 20 Q18 23 22 20" stroke="#1E293B" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+  <ellipse cx="24" cy="12" rx="3" ry="2" fill="#6BC4A6" opacity="0.8"/>
+  <text x="40" y="24" font-family="system-ui, sans-serif" font-size="18" font-weight="800" fill="#1E293B">구구레터</text>
+</svg>

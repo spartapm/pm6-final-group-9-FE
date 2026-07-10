@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api-client";
@@ -13,7 +12,6 @@ export default function ClaimLetterPage() {
   const params = useParams<{ token: string }>();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function claim() {
@@ -41,33 +39,16 @@ export default function ClaimLetterPage() {
         } else {
           setError("쪽지를 불러오지 못했어요.");
         }
-        setLoading(false);
       }
     }
     claim();
   }, [params.token, router]);
 
-  if (loading) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-bg)] px-6 text-center">
-        <Image
-          src="/images/success-gugu.svg"
-          alt=""
-          width={140}
-          height={112}
-          aria-hidden
-          className="mb-6 animate-pulse"
-        />
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          쪽지를 연결하는 중…
-        </p>
-      </main>
-    );
-  }
-
   if (error) {
     return <ErrorState title={error} homeHref="/home" />;
   }
 
-  return null;
+  return (
+    <main className="min-h-screen bg-[var(--color-bg)]" aria-busy="true" />
+  );
 }

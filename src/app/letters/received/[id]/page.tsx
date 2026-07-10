@@ -3,15 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toPng } from "html-to-image";
+import { LetterDetailSkeleton } from "@/components/common/ContentSkeleton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { redirectToOnboarding } from "@/lib/auth-redirect";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { toast } from "@/components/common/Toast";
 import { track } from "@/lib/analytics";
+import { useReceivedLetter, queryKeys } from "@/lib/queries";
 import { ShareableLetterCard, preloadShareAssets, SHARE_CARD_CAPTURE_OPTIONS } from "@/components/letter/ShareableLetterCard";
-import { REACTION_LABELS, REACTION_OPTIONS, type Letter } from "@/types";
+import { REACTION_LABELS, REACTION_OPTIONS } from "@/types";
 
 function formatReceivedDate(iso: string) {
   const d = new Date(iso);
@@ -92,48 +95,43 @@ export default function ReceivedDetailPage() {
   const router = useRouter();
   const shareRef = useRef<HTMLDivElement>(null);
 
-  const [letter, setLetter] = useState<Letter | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const {
+    data: letter,
+    error: queryError,
+    refetch,
+    isPending,
+  } = useReceivedLetter(params.id);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [reaction, setReaction] = useState<string | null>(null);
   const [reactionOpen, setReactionOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiFetch<{ data: Letter & { reaction: string | null } }>(
-        `/letters/received/${params.id}`
-      );
-      setLetter(res.data);
-      setReaction(res.data.reaction ?? null);
-      setReactionOpen(false);
-      setError(null);
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
-        redirectToOnboarding(
-          router,
-          "MESSAGE_READ",
-          `/letters/received/${params.id}`
-        );
-        return;
-      } else if (e instanceof ApiError && e.status === 403) {
-        setError("접근 할 수 없는 화면이에요");
-      } else if (e instanceof ApiError && e.status === 404) {
-        setError("존재하지 않는 쪽지예요");
-      } else {
-        setError("쪽지를 불러오지 못했어요. 다시 시도해주세요");
-      }
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (letter) {
+      setReaction(letter.reaction ?? null);
     }
-  }, [params.id, router]);
+  }, [letter]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (queryError instanceof ApiError && queryError.status === 401) {
+      redirectToOnboarding(
+        router,
+        "MESSAGE_READ",
+        `/letters/received/${params.id}`
+      );
+    }
+  }, [queryError, params.id, router]);
+
+  const error =
+    queryError instanceof ApiError && queryError.status === 403
+      ? "접근 할 수 없는 화면이에요"
+      : queryError instanceof ApiError && queryError.status === 404
+        ? "존재하지 않는 쪽지예요"
+        : queryError
+          ? "쪽지를 불러오지 못했어요. 다시 시도해주세요"
+          : null;
 
   async function onReaction(emoji: string) {
     try {
@@ -146,8 +144,10 @@ export default function ReceivedDetailPage() {
       );
       setReaction(res.data.emoji);
       setReactionOpen(false);
-      setLetter((prev) =>
-        prev ? { ...prev, reaction: res.data.emoji } : prev
+      queryClient.setQueryData(
+        queryKeys.letterReceived(params.id),
+        (prev: typeof letter) =>
+          prev ? { ...prev, reaction: res.data.emoji } : prev
       );
     } catch {
       toast("이모지 등록에 실패했어요. 다시 시도해주세요.");
@@ -217,20 +217,14 @@ export default function ReceivedDetailPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg-content)] text-sm text-[var(--color-text-secondary)]">
-        불러오는 중…
-      </div>
-    );
-  }
-
-  if (error || !letter) {
-    return <ErrorState title={error ?? "쪽지를 찾을 수 없어요."} onRetry={load} />;
-  }
-
-  const senderLabel = letter.is_anonymous ? "익명" : letter.sender_nickname;
-  const activeReaction = reaction ?? letter.reaction ?? null;
+  const senderLabel = letter
+    ? letter.is_anonymous
+      ? "익명"
+      : letter.sender_nickname
+    : "";
+  const activeReaction = letter
+    ? (reaction ?? letter.reaction ?? null)
+    : null;
 
   return (
     <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)]">
@@ -251,51 +245,61 @@ export default function ReceivedDetailPage() {
           </svg>
         </Link>
 
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-10 w-10 items-center justify-center text-[#474747]"
-            aria-label="더보기"
-          >
-            <svg width="5" height="19" viewBox="0 0 5 19" fill="currentColor" aria-hidden>
-              <circle cx="2.5" cy="2.5" r="2.5" />
-              <circle cx="2.5" cy="9.5" r="2.5" />
-              <circle cx="2.5" cy="16.5" r="2.5" />
-            </svg>
-          </button>
+        {letter ? (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex h-10 w-10 items-center justify-center text-[#474747]"
+              aria-label="더보기"
+            >
+              <svg width="5" height="19" viewBox="0 0 5 19" fill="currentColor" aria-hidden>
+                <circle cx="2.5" cy="2.5" r="2.5" />
+                <circle cx="2.5" cy="9.5" r="2.5" />
+                <circle cx="2.5" cy="16.5" r="2.5" />
+              </svg>
+            </button>
 
-          {menuOpen ? (
-            <>
-              <button
-                type="button"
-                className="fixed inset-0 z-10"
-                aria-label="메뉴 닫기"
-                onClick={() => setMenuOpen(false)}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setReportOpen(true);
-                }}
-                className="absolute right-0 z-20 mt-1 flex h-[38px] w-[100px] items-center justify-center rounded-[10px] bg-[#242429] text-[14px] text-white"
-              >
-                신고하기
-              </button>
-            </>
-          ) : null}
-        </div>
+            {menuOpen ? (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-10"
+                  aria-label="메뉴 닫기"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setReportOpen(true);
+                  }}
+                  className="absolute right-0 z-20 mt-1 flex h-[38px] w-[100px] items-center justify-center rounded-[10px] bg-[#242429] text-[14px] text-white"
+                >
+                  신고하기
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">
-        <div className="w-full -translate-y-5">
-          <ReceivedLetterCard
-            senderLabel={senderLabel}
-            content={letter.content}
-          />
+      {error && !letter ? (
+        <ErrorState title={error} onRetry={() => refetch()} />
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">
+          <div className="w-full -translate-y-5">
+            {letter ? (
+              <ReceivedLetterCard
+                senderLabel={senderLabel}
+                content={letter.content}
+              />
+            ) : isPending ? (
+              <LetterDetailSkeleton />
+            ) : null}
 
-          <div className="mt-6">
+            {letter ? (
+              <div className="mt-6">
           {reactionOpen ? (
             <section className="rounded-[17px] bg-[rgba(232,232,232,0.76)] px-4 pb-5 pt-4">
               <div className="flex items-start gap-2">
@@ -392,11 +396,13 @@ export default function ReceivedDetailPage() {
               </div>
             </div>
           )}
+              </div>
+            ) : null}
+          </div>
         </div>
-        </div>
-      </div>
+      )}
 
-      {reportOpen ? (
+      {reportOpen && letter ? (
         <ConfirmModal
           title="신고하기"
           description="정말 신고하시겠습니까?"
@@ -405,13 +411,15 @@ export default function ReceivedDetailPage() {
         />
       ) : null}
 
-      <div aria-hidden className="pointer-events-none fixed -left-[9999px] top-0">
-        <ShareableLetterCard
-          ref={shareRef}
-          senderLabel={senderLabel}
-          content={letter.content}
-        />
-      </div>
+      {letter ? (
+        <div aria-hidden className="pointer-events-none fixed -left-[9999px] top-0">
+          <ShareableLetterCard
+            ref={shareRef}
+            senderLabel={senderLabel}
+            content={letter.content}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }

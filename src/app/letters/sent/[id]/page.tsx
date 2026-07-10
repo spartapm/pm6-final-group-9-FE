@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { LetterDetailSkeleton } from "@/components/common/ContentSkeleton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { redirectToOnboarding } from "@/lib/auth-redirect";
-import { apiFetch, ApiError } from "@/lib/api-client";
-import { REACTION_LABELS, type Letter } from "@/types";
+import { ApiError } from "@/lib/api-client";
+import { useSentLetter } from "@/lib/queries";
+import { REACTION_LABELS } from "@/types";
 
 function formatLetterDate(iso: string) {
   const d = new Date(iso);
@@ -38,110 +40,107 @@ function SentLetterCard({
   );
 }
 
+function DetailHeader() {
+  return (
+    <header className="relative flex h-14 shrink-0 items-center px-3">
+      <Link
+        href="/home?tab=sent"
+        className="flex h-10 w-10 items-center justify-center text-[#474747]"
+        aria-label="뒤로"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M14.5 5 8 11.5 14.5 18"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </Link>
+    </header>
+  );
+}
+
 export default function SentDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [letter, setLetter] = useState<
-    (Letter & { reaction: string | null; is_opened: boolean }) | null
-  >(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: letter, error, refetch, isPending } = useSentLetter(params.id);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await apiFetch<{
-          data: Letter & { reaction: string | null; is_opened: boolean };
-        }>(`/letters/sent/${params.id}`);
-        setLetter(res.data);
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 401) {
-          redirectToOnboarding(
-            router,
-            "DIRECT",
-            `/letters/sent/${params.id}`
-          );
-          return;
-        }
-        setError("쪽지를 불러오지 못했어요. 다시 시도해주세요");
-      } finally {
-        setLoading(false);
-      }
+    if (error instanceof ApiError && error.status === 401) {
+      redirectToOnboarding(router, "DIRECT", `/letters/sent/${params.id}`);
     }
-    load();
-  }, [params.id, router]);
+  }, [error, params.id, router]);
 
-  if (loading) {
+  const errorMessage =
+    error instanceof ApiError && error.status === 403
+      ? "접근 할 수 없는 화면이에요"
+      : error instanceof ApiError && error.status === 404
+        ? "존재하지 않는 쪽지예요"
+        : error
+          ? "쪽지를 불러오지 못했어요. 다시 시도해주세요"
+          : null;
+
+  if (errorMessage && !letter) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg-content)] text-sm text-[var(--color-text-secondary)]">
-        불러오는 중…
-      </div>
+      <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)]">
+        <DetailHeader />
+        <ErrorState title={errorMessage} onRetry={() => refetch()} />
+      </main>
     );
   }
 
-  if (error || !letter) {
-    return (
-      <ErrorState
-        title={error ?? "쪽지를 찾을 수 없어요."}
-        onRetry={() => router.refresh()}
-      />
-    );
-  }
-
-  const senderLabel = letter.is_anonymous ? "익명" : letter.sender_nickname;
+  const senderLabel = letter
+    ? letter.is_anonymous
+      ? "익명"
+      : letter.sender_nickname
+    : "";
   const isLinkUnclaimed =
-    letter.delivery_type === "link" && !letter.receiver_id;
-  const unread = !letter.read_at;
-  const unreadMessage = isLinkUnclaimed
-    ? "아직 확인하지 않았어요"
-    : unread
-      ? "아직 친구가 읽지 않았어요"
-      : null;
+    letter?.delivery_type === "link" && !letter.receiver_id;
+  const unread = letter ? !letter.read_at : false;
+  const unreadMessage = letter
+    ? isLinkUnclaimed
+      ? "아직 확인하지 않았어요"
+      : unread
+        ? "아직 친구가 읽지 않았어요"
+        : null
+    : null;
 
   return (
     <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)]">
-      <header className="relative flex h-14 shrink-0 items-center px-3">
-        <Link
-          href="/home?tab=sent"
-          className="flex h-10 w-10 items-center justify-center text-[#474747]"
-          aria-label="뒤로"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M14.5 5 8 11.5 14.5 18"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
-      </header>
+      <DetailHeader />
 
       <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">
         <div className="w-full -translate-y-5">
-          <SentLetterCard senderLabel={senderLabel} content={letter.content} />
+          {letter ? (
+            <SentLetterCard senderLabel={senderLabel} content={letter.content} />
+          ) : isPending ? (
+            <LetterDetailSkeleton />
+          ) : null}
 
-          <div className="mt-6 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              {unreadMessage ? (
-                <p className="text-[14px] font-medium text-[#929292]">
-                  {unreadMessage}
-                </p>
-              ) : letter.reaction ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#191F28] px-3 py-2 text-[14px] font-semibold text-white">
-                  <span className="text-[19px] leading-none">
-                    {letter.reaction}
+          {letter ? (
+            <div className="mt-6 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                {unreadMessage ? (
+                  <p className="text-[14px] font-medium text-[#929292]">
+                    {unreadMessage}
+                  </p>
+                ) : letter.reaction ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#191F28] px-3 py-2 text-[14px] font-semibold text-white">
+                    <span className="text-[19px] leading-none">
+                      {letter.reaction}
+                    </span>
+                    <span>{REACTION_LABELS[letter.reaction] ?? ""}</span>
                   </span>
-                  <span>{REACTION_LABELS[letter.reaction] ?? ""}</span>
-                </span>
-              ) : null}
-            </div>
+                ) : null}
+              </div>
 
-            <p className="shrink-0 pt-1 text-[12px] font-medium text-[#787878]">
-              {formatLetterDate(letter.created_at)}
-            </p>
-          </div>
+              <p className="shrink-0 pt-1 text-[12px] font-medium text-[#787878]">
+                {formatLetterDate(letter.created_at)}
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
     </main>

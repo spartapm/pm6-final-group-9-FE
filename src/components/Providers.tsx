@@ -8,7 +8,19 @@ import { useState, type ReactNode } from "react";
 import { ToastHost } from "@/components/common/Toast";
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [client] = useState(() => new QueryClient());
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 5 * 60 * 1000,
+            gcTime: 30 * 60 * 1000,
+            refetchOnWindowFocus: false,
+            retry: 1,
+          },
+        },
+      })
+  );
 
   return (
     <QueryClientProvider client={client}>

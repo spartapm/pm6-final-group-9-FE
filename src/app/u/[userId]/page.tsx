@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { WriteLetterForm } from "@/components/letter/WriteLetterForm";
-import { apiFetch, ApiError } from "@/lib/api-client";
+import { ProfileHeaderSkeleton } from "@/components/common/ContentSkeleton";
+import { ApiError } from "@/lib/api-client";
 import { ErrorState } from "@/components/common/ErrorState";
 import { track } from "@/lib/analytics";
-import type { Profile } from "@/types";
+import { usePublicProfile } from "@/lib/queries";
 
 function FriendHomeHeader() {
   return (
@@ -45,81 +46,67 @@ function FriendHomeHeader() {
 
 export default function PublicHomePage() {
   const params = useParams<{ userId: string }>();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: profile, error, isPending } = usePublicProfile(params.userId);
 
   const publicPath = `/u/${params.userId}`;
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await apiFetch<{ data: Profile }>(
-          `/profiles/${params.userId}`,
-          { auth: false }
-        );
-        setProfile(res.data);
-        track("status_message_view_visitor", {
-          owner_id: res.data.id,
-          has_message: Boolean(res.data.status_message),
-        });
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 404) {
-          setError("존재하지 않는 홈이에요.");
-        } else {
-          setError("홈 정보를 불러오지 못했어요.");
-        }
-      } finally {
-        setLoading(false);
-      }
+    if (profile) {
+      track("status_message_view_visitor", {
+        owner_id: profile.id,
+        has_message: Boolean(profile.status_message),
+      });
     }
-    load();
-  }, [params.userId]);
+  }, [profile]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-[var(--color-text-secondary)]">
-        불러오는 중…
-      </div>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <ErrorState
-        title={error ?? "존재하지 않는 홈이에요."}
-        homeHref="/login"
-      />
-    );
-  }
+  const errorMessage =
+    error instanceof ApiError && error.status === 404
+      ? "존재하지 않는 홈이에요."
+      : error
+        ? "홈 정보를 불러오지 못했어요."
+        : null;
 
   return (
     <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)] pb-8">
       <FriendHomeHeader />
 
-      <section className="bg-white px-6 pb-5 pt-4">
-        <h1 className="text-center text-[18px] tracking-[-0.5px] text-[var(--color-text-secondary)]">
-          <span className="font-semibold text-black">{profile.nickname}</span>
-          의 쪽지함
-        </h1>
+      {errorMessage && !profile ? (
+        <ErrorState title={errorMessage} homeHref="/login" />
+      ) : (
+        <>
+          <section className="bg-white px-6 pb-5 pt-4">
+            {profile ? (
+              <>
+                <h1 className="text-center text-[18px] tracking-[-0.5px] text-[var(--color-text-secondary)]">
+                  <span className="font-semibold text-black">{profile.nickname}</span>
+                  의 쪽지함
+                </h1>
 
-        {profile.status_message ? (
-          <p className="mt-4 rounded-full border border-[var(--color-border-light)] bg-white px-4 py-2.5 text-center text-[13px] leading-snug text-[var(--color-text-secondary)]">
-            {profile.status_message}
-          </p>
-        ) : null}
-      </section>
+                {profile.status_message ? (
+                  <p className="mt-4 rounded-full border border-[var(--color-border-light)] bg-white px-4 py-2.5 text-center text-[13px] leading-snug text-[var(--color-text-secondary)]">
+                    {profile.status_message}
+                  </p>
+                ) : null}
+              </>
+            ) : isPending ? (
+              <ProfileHeaderSkeleton />
+            ) : null}
+          </section>
 
-      <WriteLetterForm
-        receiverId={profile.id}
-        receiverNickname={profile.nickname}
-        entryPath="receiver_home"
-        returnUrl={publicPath}
-        completeBackPath={publicPath}
-        showTitle={false}
-        submitLabel="친구에게 쪽지 써주기"
-        showSubmitIcon
-      />
+          {profile ? (
+            <WriteLetterForm
+              receiverId={profile.id}
+              receiverNickname={profile.nickname}
+              entryPath="receiver_home"
+              returnUrl={publicPath}
+              completeBackPath={publicPath}
+              showTitle={false}
+              submitLabel="친구에게 쪽지 써주기"
+              showSubmitIcon
+            />
+          ) : null}
+        </>
+      )}
     </main>
   );
 }

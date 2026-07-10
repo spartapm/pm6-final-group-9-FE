@@ -3,20 +3,23 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/common/Toast";
 import { track } from "@/lib/analytics";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { queryKeys, useMyProfile } from "@/lib/queries";
 import type { Profile } from "@/types";
 
 const NICKNAME_MAX = 10;
 
 export default function SettingsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurSaveRef = useRef(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { data: profile, error: profileError } = useMyProfile();
   const [nickname, setNickname] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -25,13 +28,16 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    apiFetch<{ data: Profile }>("/profiles/me")
-      .then((res) => {
-        setProfile(res.data);
-        setNickname(res.data.nickname);
-      })
-      .catch(() => router.replace("/onboarding"));
-  }, [router]);
+    if (profile) {
+      setNickname(profile.nickname);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (profileError) {
+      router.replace("/onboarding");
+    }
+  }, [profileError, router]);
 
   function clampNickname(value: string) {
     return value.slice(0, NICKNAME_MAX);
@@ -63,7 +69,7 @@ export default function SettingsPage() {
         method: "PATCH",
         body: JSON.stringify({ nickname: value }),
       });
-      setProfile(res.data);
+      queryClient.setQueryData(queryKeys.profile, res.data);
       setNickname(res.data.nickname);
       return true;
     } catch (e) {
@@ -133,14 +139,6 @@ export default function SettingsPage() {
     window.location.href = "mailto:guguletter@gmail.com";
   }
 
-  if (!profile) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-[var(--color-text-secondary)]">
-        불러오는 중…
-      </div>
-    );
-  }
-
   const showLimitWarning = isEditing && nickname.length >= NICKNAME_MAX;
 
   return (
@@ -154,8 +152,8 @@ export default function SettingsPage() {
               <input
                 ref={inputRef}
                 value={nickname}
-                readOnly={!isEditing}
-                disabled={saving}
+                readOnly={!isEditing || !profile}
+                disabled={saving || !profile}
                 onChange={(e) => {
                   if (!isEditing) return;
                   setNickname(clampNickname(e.target.value));

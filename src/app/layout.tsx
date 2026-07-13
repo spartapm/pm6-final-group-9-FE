@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
@@ -48,6 +48,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -56,10 +62,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body
-        className={`${notoSansKr.variable} min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] antialiased`}
+        className={`${notoSansKr.variable} h-full overflow-hidden bg-[var(--color-bg)] text-[var(--color-text)] antialiased`}
       >
         <Providers>
-          <div className="relative mx-auto min-h-screen w-full max-w-[390px] bg-[var(--color-bg)] shadow-[0_0_40px_rgba(0,0,0,0.06)]">
+          <div className="relative mx-auto h-[100dvh] w-full max-w-[390px] overflow-y-auto overscroll-contain bg-[var(--color-bg)] shadow-[0_0_40px_rgba(0,0,0,0.06)]">
             {children}
           </div>
         </Providers>

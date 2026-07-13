@@ -279,8 +279,8 @@ export default function ReceivedDetailPage() {
     : null;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)]">
-      <header className="relative flex h-14 shrink-0 items-center px-3">
+    <main className="flex h-[100dvh] flex-col bg-[var(--color-bg-content)]">
+      <header className="sticky top-0 z-30 flex min-h-14 shrink-0 items-center bg-[var(--color-bg-content)] px-3 pt-[env(safe-area-inset-top)]">
         <Link
           href="/home"
           className="flex h-10 w-10 items-center justify-center text-[#474747]"

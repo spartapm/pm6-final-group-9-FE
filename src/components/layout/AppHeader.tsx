@@ -44,7 +44,7 @@ export function AppHeader({
 
   return (
     <header
-      className={`relative flex h-14 shrink-0 items-center px-5 ${
+      className={`sticky top-0 z-30 flex min-h-14 shrink-0 items-center px-5 pt-[env(safe-area-inset-top)] ${
         isSplash
           ? "bg-transparent"
           : isContent

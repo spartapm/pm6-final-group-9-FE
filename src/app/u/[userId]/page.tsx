@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
@@ -12,33 +13,30 @@ import { usePublicProfile } from "@/lib/queries";
 
 function FriendHomeHeader() {
   return (
-    <header className="relative flex h-14 shrink-0 items-center justify-center bg-white px-5">
+    <header className="sticky top-0 z-30 flex min-h-14 shrink-0 items-center justify-center bg-[var(--color-bg-content)] px-5 pt-[env(safe-area-inset-top)]">
       <Link
         href="/home"
-        className="absolute left-5 flex h-9 w-9 items-center justify-center text-[#474747]"
+        className="absolute left-5 flex h-9 w-9 items-center justify-center"
         aria-label="홈으로"
       >
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
-          <path
-            d="M4 10.5 11 4l7 6.5V18a1 1 0 0 1-1 1h-4.5v-5H9.5V19H5a1 1 0 0 1-1-1v-7.5Z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M8 11.5 11 9l3 2.5"
-            stroke="currentColor"
-            strokeWidth="1.3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <Image
+          src="/images/icon-home-back.png"
+          alt=""
+          width={31}
+          height={28}
+          className="h-[28px] w-[31px]"
+          aria-hidden
+        />
       </Link>
-      <Link
-        href="/home"
-        className="logo-gugu-letter-sm text-[18px] text-[var(--color-header-logo)]"
-      >
-        GUGU LETTER
+      <Link href="/home" aria-label="구구레터 홈">
+        <Image
+          src="/images/logo-gugu-letter-gray.png"
+          alt="GUGU LETTER"
+          width={150}
+          height={16}
+          className="h-4 w-[150px]"
+          priority
+        />
       </Link>
     </header>
   );
@@ -74,7 +72,7 @@ export default function PublicHomePage() {
         <ErrorState title={errorMessage} homeHref="/login" />
       ) : (
         <>
-          <section className="bg-white px-6 pb-5 pt-4">
+          <section className="px-6 pb-5 pt-4">
             {profile ? (
               <>
                 <h1 className="text-center text-[18px] tracking-[-0.5px] text-[var(--color-text-secondary)]">

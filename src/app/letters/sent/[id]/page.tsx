@@ -42,7 +42,7 @@ function SentLetterCard({
 
 function DetailHeader() {
   return (
-    <header className="relative flex h-14 shrink-0 items-center px-3">
+    <header className="sticky top-0 z-30 flex min-h-14 shrink-0 items-center bg-[var(--color-bg-content)] px-3 pt-[env(safe-area-inset-top)]">
       <Link
         href="/home?tab=sent"
         className="flex h-10 w-10 items-center justify-center text-[#474747]"
@@ -84,7 +84,7 @@ export default function SentDetailPage() {
 
   if (errorMessage && !letter) {
     return (
-      <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)]">
+      <main className="flex h-[100dvh] flex-col bg-[var(--color-bg-content)]">
         <DetailHeader />
         <ErrorState title={errorMessage} onRetry={() => refetch()} />
       </main>
@@ -106,7 +106,7 @@ export default function SentDetailPage() {
     : null;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)]">
+    <main className="flex h-[100dvh] flex-col bg-[var(--color-bg-content)]">
       <DetailHeader />
 
       <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">

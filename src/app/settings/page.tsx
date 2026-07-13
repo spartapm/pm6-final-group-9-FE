@@ -190,7 +190,7 @@ export default function SettingsPage() {
                 className="shrink-0"
                 aria-label={isEditing ? "닉네임 저장" : "닉네임 수정"}
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
                   <path
                     d="M9.5 2.5 11.5 4.5M2 12l.5-3.5L9.5 2l3 3L5.5 11.5 2 12Z"
                     stroke="#9A9A9A"

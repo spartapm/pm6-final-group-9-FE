@@ -43,10 +43,10 @@ export function BottomNav() {
             ? item.match(pathname)
             : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <li key={item.href} className="flex flex-1 justify-center">
+            <li key={item.href} className="flex flex-1">
               <Link
                 href={item.href}
-                className={`flex flex-col items-center gap-1 py-1 text-[14px] font-medium tracking-[-0.5px] transition ${
+                className={`flex w-full flex-col items-center justify-center gap-1 py-1 text-[14px] font-medium tracking-[-0.5px] transition ${
                   active
                     ? "text-[var(--color-text-secondary)]"
                     : "text-[var(--color-text-secondary)] opacity-50"

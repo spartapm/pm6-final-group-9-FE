@@ -64,9 +64,12 @@ export default function HomePage() {
 
   const {
     data: lettersData,
+    error: lettersError,
+    refetch: refetchLetters,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     isPending: lettersPending,
   } = useLetters(tab, authChecked && Boolean(profile));
 
@@ -150,6 +153,12 @@ export default function HomePage() {
     }
   }, [profileError, refetchProfile, verifySession]);
 
+  useEffect(() => {
+    if (isFetchNextPageError) {
+      toast("쪽지를 불러오지 못했어요. 다시 시도해주세요");
+    }
+  }, [isFetchNextPageError]);
+
   async function copyHomeLink(currentProfile: Profile) {
     track("home_link_copy_click", { user_id: currentProfile.id });
     const url = `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/u/${currentProfile.home_slug}`;
@@ -210,8 +219,8 @@ export default function HomePage() {
             src="/images/icon-letter.png"
             alt=""
             width={17}
-            height={17}
-            className={`mt-0.5 h-[17px] w-[17px] shrink-0 ${
+            height={24}
+            className={`mt-0.5 h-[24px] w-[17px] shrink-0 ${
               unread ? "opacity-30" : "opacity-100"
             }`}
             aria-hidden
@@ -268,8 +277,8 @@ export default function HomePage() {
             src="/images/icon-letter.png"
             alt=""
             width={17}
-            height={17}
-            className="mt-0.5 h-[17px] w-[17px] shrink-0"
+            height={24}
+            className="mt-0.5 h-[24px] w-[17px] shrink-0"
             aria-hidden
           />
           <div className="min-w-0 flex-1">
@@ -299,10 +308,12 @@ export default function HomePage() {
     editingStatus && statusDraft.length >= STATUS_MESSAGE_MAX;
   const showLetterSkeletons =
     profile && lettersPending && letters.length === 0;
+  const showListError =
+    profile && Boolean(lettersError) && letters.length === 0 && !lettersPending;
 
   return (
     <main
-      className={`flex min-h-screen flex-col bg-white ${mainTabPaddingClass}`}
+      className={`flex h-[100dvh] flex-col bg-white ${mainTabPaddingClass}`}
     >
       <AppHeader centered settingsHref="/settings" />
 
@@ -334,7 +345,7 @@ export default function HomePage() {
                       value={statusDraft}
                       maxLength={STATUS_MESSAGE_MAX}
                       onChange={(e) => setStatusDraft(e.target.value)}
-                      placeholder="요즘 어떻게 지내시나요?"
+                      placeholder="상태메시지를 작성해주세요"
                       className="w-full bg-transparent pr-8 text-[13px] text-[var(--color-text-secondary)] outline-none"
                       autoFocus
                       onKeyDown={(e) => {
@@ -345,7 +356,7 @@ export default function HomePage() {
                     <p className="flex-1 pr-8 text-center text-[13px] text-[var(--color-text-secondary)]">
                       {profile.status_message || (
                         <span className="text-[var(--color-text-muted)]">
-                          요즘 어떻게 지내시나요?
+                          상태메시지를 작성해주세요
                         </span>
                       )}
                     </p>
@@ -401,57 +412,72 @@ export default function HomePage() {
           onChange={(id) => setTab(id as Tab)}
         />
 
-        <section className="relative flex flex-1 flex-col bg-[var(--color-bg-content)] px-5 pb-14 pt-4">
+        <section className="relative flex min-h-0 flex-1 flex-col bg-[var(--color-bg-content)] px-5 pb-14 pt-4">
           <p className="mb-3 text-[12px] text-[var(--color-text-muted)]">
             {tab === "received"
               ? "받은 쪽지는 나만 볼 수 있어요"
               : "보낸 쪽지는 나만 볼 수 있어요"}
           </p>
 
-          {showLetterSkeletons ? (
-            <ul className="space-y-3">
-              {[0, 1, 2].map((i) => (
-                <li key={i}>
-                  <LetterCardSkeleton />
-                </li>
-              ))}
-            </ul>
-          ) : profile && letters.length === 0 && !lettersPending ? (
-            <EmptyState
-              title={
-                tab === "received"
-                  ? "아직 받은 쪽지가 없어요"
-                  : "아직 보낸 쪽지가 없어요"
-              }
-              description={
-                tab === "received"
-                  ? "내 쪽지함 링크를 공유해 보세요."
-                  : "하단 ‘쪽지 보내기’에서 쪽지를내보세요."
-              }
-              imageSrc="/images/empty-inbox.png"
-            />
-          ) : (
-            <ul className="space-y-3">
-              {letters.map((letter) => (
-                <li key={letter.id}>
-                  {tab === "received"
-                    ? renderReceivedCard(letter)
-                    : renderSentCard(letter)}
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {showLetterSkeletons ? (
+              <ul className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <li key={i}>
+                    <LetterCardSkeleton />
+                  </li>
+                ))}
+              </ul>
+            ) : showListError ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-12 text-center">
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  쪽지를 불러오지 못했어요. 다시 시도해주세요
+                </p>
+                <button
+                  type="button"
+                  onClick={() => refetchLetters()}
+                  className="rounded-xl border border-[var(--color-border)] bg-white px-5 py-2.5 text-sm font-medium text-[var(--color-text-secondary)]"
+                >
+                  다시 시도
+                </button>
+              </div>
+            ) : profile && letters.length === 0 && !lettersPending ? (
+              <EmptyState
+                title={
+                  tab === "received"
+                    ? "아직 받은 쪽지가 없어요"
+                    : "아직 보낸 쪽지가 없어요"
+                }
+                description={
+                  tab === "received"
+                    ? "내 쪽지함 링크를 공유해 보세요."
+                    : "하단 ‘쪽지 보내기’에서 쪽지를 보내보세요."
+                }
+                imageSrc="/images/empty-inbox.svg"
+              />
+            ) : (
+              <ul className="space-y-3">
+                {letters.map((letter) => (
+                  <li key={letter.id}>
+                    {tab === "received"
+                      ? renderReceivedCard(letter)
+                      : renderSentCard(letter)}
+                  </li>
+                ))}
+              </ul>
+            )}
 
-          {hasNextPage ? (
-            <button
-              type="button"
-              disabled={isFetchingNextPage}
-              onClick={() => fetchNextPage()}
-              className="mt-4 w-full rounded-xl border border-[var(--color-border)] bg-white py-3 text-sm text-[var(--color-text-secondary)] disabled:opacity-60"
-            >
-              {isFetchingNextPage ? "불러오는 중…" : "더 보기"}
-            </button>
-          ) : null}
+            {hasNextPage ? (
+              <button
+                type="button"
+                disabled={isFetchingNextPage}
+                onClick={() => fetchNextPage()}
+                className="mt-4 w-full rounded-xl border border-[var(--color-border)] bg-white py-3 text-sm text-[var(--color-text-secondary)] disabled:opacity-60"
+              >
+                {isFetchingNextPage ? "불러오는 중…" : "더 보기"}
+              </button>
+            ) : null}
+          </div>
 
           {profile ? (
             <button

@@ -8,6 +8,7 @@ type NavItem = {
   href: string;
   label: string;
   iconSrc: string;
+  iconInactiveSrc: string;
   match?: (path: string) => boolean;
 };
 
@@ -16,6 +17,7 @@ const items: NavItem[] = [
     href: "/home",
     label: "쪽지함",
     iconSrc: "/images/icon-inbox-tab.png",
+    iconInactiveSrc: "/images/icon-inbox-tab-inactive.png",
     match: (p) =>
       p === "/home" ||
       p.startsWith("/letters/") ||
@@ -25,6 +27,7 @@ const items: NavItem[] = [
     href: "/write",
     label: "쪽지 보내기",
     iconSrc: "/images/icon-send-tab.png",
+    iconInactiveSrc: "/images/icon-send-tab-inactive.png",
     match: (p) => p.startsWith("/write") || p.startsWith("/send/"),
   },
 ];
@@ -50,11 +53,11 @@ export function BottomNav() {
                 }`}
               >
                 <Image
-                  src={item.iconSrc}
+                  src={active ? item.iconSrc : item.iconInactiveSrc}
                   alt=""
                   width={20}
                   height={20}
-                  className={`h-5 w-5 ${active ? "" : "opacity-70"}`}
+                  className="h-5 w-5"
                   aria-hidden
                 />
                 {item.label}

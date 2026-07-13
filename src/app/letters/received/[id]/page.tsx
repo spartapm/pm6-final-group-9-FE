@@ -104,7 +104,9 @@ export default function ReceivedDetailPage() {
   } = useReceivedLetter(params.id);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reaction, setReaction] = useState<string | null>(null);
   const [reactionOpen, setReactionOpen] = useState(false);
 
@@ -165,9 +167,9 @@ export default function ReceivedDetailPage() {
     }
   }
 
-  async function shareCard() {
-    if (!letter || !shareRef.current || sharing) return;
-    setSharing(true);
+  async function openSharePreview() {
+    if (!letter || !shareRef.current || generating) return;
+    setGenerating(true);
     track("share_card_image_icon_click", {
       letter_id: letter.id,
       receiver_id: letter.receiver_id,
@@ -180,14 +182,41 @@ export default function ReceivedDetailPage() {
       });
       await preloadShareAssets();
       const dataUrl = await toPng(shareRef.current, SHARE_CARD_CAPTURE_OPTIONS);
+      setPreviewUrl(dataUrl);
       track("share_card_preview_view", {
         letter_id: letter.id,
         card_template_id: "default_card",
       });
+    } catch {
+      toast("공유 이미지를 만들지 못했어요. 다시 시도해주세요.");
+      track("share_card_external_share_fail", {
+        letter_id: letter.id,
+        error_code: "generate_fail",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  }
 
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], "guguletter.png", { type: "image/png" });
+  async function dataUrlToFile(dataUrl: string) {
+    const blob = await (await fetch(dataUrl)).blob();
+    return new File([blob], "guguletter.png", { type: "image/png" });
+  }
 
+  function saveImage(dataUrl: string) {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "guguletter.png";
+    a.click();
+    toast("이미지를 저장했어요.");
+    if (letter) track("share_card_save_complete", { letter_id: letter.id });
+  }
+
+  async function shareImage() {
+    if (!letter || !previewUrl || sharing) return;
+    setSharing(true);
+    try {
+      const file = await dataUrlToFile(previewUrl);
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -198,12 +227,7 @@ export default function ReceivedDetailPage() {
           letter_id: letter.id,
         });
       } else {
-        const a = document.createElement("a");
-        a.href = dataUrl;
-        a.download = "guguletter.png";
-        a.click();
-        toast("이미지를 저장했어요.");
-        track("share_card_save_complete", { letter_id: letter.id });
+        saveImage(previewUrl);
       }
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return;
@@ -379,19 +403,26 @@ export default function ReceivedDetailPage() {
                 </p>
                 <button
                   type="button"
-                  disabled={sharing}
-                  onClick={shareCard}
+                  disabled={generating}
+                  onClick={openSharePreview}
                   className="flex h-8 w-8 items-center justify-center disabled:opacity-50"
                   aria-label="이미지로 공유하기"
                 >
-                  <Image
-                    src="/images/icon-share-external.svg"
-                    alt=""
-                    width={18}
-                    height={18}
-                    className="h-[18px] w-[18px]"
-                    aria-hidden
-                  />
+                  {generating ? (
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-[#C5C5C5] border-t-[#474747]"
+                      aria-hidden
+                    />
+                  ) : (
+                    <Image
+                      src="/images/icon-share-external.svg"
+                      alt=""
+                      width={18}
+                      height={18}
+                      className="h-[18px] w-[18px]"
+                      aria-hidden
+                    />
+                  )}
                 </button>
               </div>
             </div>
@@ -409,6 +440,49 @@ export default function ReceivedDetailPage() {
           onCancel={() => setReportOpen(false)}
           onConfirm={onReport}
         />
+      ) : null}
+
+      {previewUrl ? (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 px-6 py-8">
+          <button
+            type="button"
+            className="absolute inset-0"
+            aria-label="미리보기 닫기"
+            onClick={() => setPreviewUrl(null)}
+          />
+          <div className="relative z-10 flex w-full max-w-[320px] flex-col items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt="공유 이미지 미리보기"
+              className="max-h-[60vh] w-full rounded-[16px] object-contain shadow-lg"
+            />
+            <div className="mt-5 flex w-full gap-2">
+              <button
+                type="button"
+                onClick={() => saveImage(previewUrl)}
+                className="flex-1 rounded-xl border border-white/70 bg-white/10 py-3 text-sm font-semibold text-white"
+              >
+                이미지 저장
+              </button>
+              <button
+                type="button"
+                disabled={sharing}
+                onClick={shareImage}
+                className="flex-1 rounded-xl bg-white py-3 text-sm font-semibold text-[#242429] disabled:opacity-70"
+              >
+                {sharing ? "공유 중…" : "공유하기"}
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPreviewUrl(null)}
+              className="mt-3 text-sm font-medium text-white/80"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
       ) : null}
 
       {letter ? (

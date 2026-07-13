@@ -44,33 +44,14 @@ export function SplashScreen({
         }`}
       >
         <Image
-          src="/images/splash-pigeon.png"
-          alt="구구"
-          width={176}
-          height={148}
+          src="/images/splash-logo.png"
+          alt="GUGU LETTER"
+          width={200}
+          height={333}
           priority
-          className="h-auto w-[176px] select-none"
+          className="h-auto w-[200px] select-none"
           draggable={false}
         />
-        <div className="relative mt-10">
-          <Image
-            src="/images/splash-envelope.svg"
-            alt=""
-            width={22}
-            height={22}
-            className="absolute -left-5 top-[18px] h-[22px] w-[22px]"
-            aria-hidden
-          />
-          <Image
-            src="/images/splash-logo-gugu-letter.png"
-            alt="GUGU LETTER"
-            width={160}
-            height={98}
-            priority
-            className="h-auto w-[160px] select-none"
-            draggable={false}
-          />
-        </div>
       </div>
     </main>
   );

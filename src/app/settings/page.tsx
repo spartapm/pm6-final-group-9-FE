@@ -106,29 +106,31 @@ export default function SettingsPage() {
   }
 
   async function handleLogout() {
+    if (busy) return;
     setBusy(true);
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.replace("/onboarding");
+      queryClient.clear();
+      window.location.replace("/onboarding");
     } catch {
       toast("로그아웃에 실패했어요. 다시 시도해주세요.");
-    } finally {
       setBusy(false);
       setLogoutOpen(false);
     }
   }
 
   async function handleWithdraw() {
+    if (busy) return;
     setBusy(true);
     try {
       await apiFetch("/profiles/me", { method: "DELETE" });
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.replace("/onboarding");
+      queryClient.clear();
+      window.location.replace("/onboarding");
     } catch {
       toast("회원탈퇴에 실패했어요. 다시 시도해주세요.");
-    } finally {
       setBusy(false);
       setWithdrawOpen(false);
     }
@@ -296,8 +298,9 @@ function ConfirmModal({
         <div className="mt-6 flex gap-2">
           <button
             type="button"
+            disabled={busy}
             onClick={onCancel}
-            className="flex-1 rounded-xl border border-[var(--color-border)] py-3 text-sm font-medium"
+            className="flex-1 rounded-xl border border-[var(--color-border)] py-3 text-sm font-medium disabled:opacity-50"
           >
             아니요
           </button>
@@ -305,9 +308,9 @@ function ConfirmModal({
             type="button"
             disabled={busy}
             onClick={onConfirm}
-            className="flex-1 rounded-xl bg-[#474747] py-3 text-sm font-semibold text-white"
+            className="flex-1 rounded-xl bg-[#474747] py-3 text-sm font-semibold text-white disabled:opacity-70"
           >
-            예
+            {busy ? "처리 중…" : "예"}
           </button>
         </div>
       </div>

@@ -8,7 +8,7 @@ function HeaderLogo() {
         src="/images/logo-gugu-letter.png"
         alt="GUGU LETTER"
         width={148}
-        height={16}
+        height={28}
         className="h-auto w-[148px]"
         priority
       />

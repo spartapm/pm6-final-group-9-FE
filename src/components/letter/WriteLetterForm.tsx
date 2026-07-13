@@ -54,6 +54,7 @@ export function WriteLetterForm({
   const [focused, setFocused] = useState(false);
   const [nicknameFocused, setNicknameFocused] = useState(false);
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const nicknameRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -89,29 +90,30 @@ export function WriteLetterForm({
   }
 
   async function sendLetter() {
-    if (!canSend || sending) return;
-
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setDraft({
-        receiverId,
-        receiverNickname,
-        content: content.trim(),
-        senderNickname: senderNickname.trim(),
-        isAnonymous: false,
-        entryPath,
-        guideCategory: null,
-      });
-      redirectToOnboarding(router, "MESSAGE_WRITE", returnUrl);
-      return;
-    }
-
+    if (!canSend || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
+
     try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setDraft({
+          receiverId,
+          receiverNickname,
+          content: content.trim(),
+          senderNickname: senderNickname.trim(),
+          isAnonymous: false,
+          entryPath,
+          guideCategory: null,
+        });
+        redirectToOnboarding(router, "MESSAGE_WRITE", returnUrl);
+        return;
+      }
+
       const res = await apiFetch<{
         data: { letter: Letter; shareUrl: string | null };
       }>("/letters", {
@@ -149,7 +151,7 @@ export function WriteLetterForm({
           ? e.message
           : "전송에 실패했어요. 다시 시도해주세요"
       );
-    } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }

@@ -52,20 +52,12 @@ function LoginContent() {
     <main className="flex min-h-screen flex-col bg-white">
       <div className="flex flex-1 flex-col items-center justify-center px-8 pt-8">
         <Image
-          src="/images/splash-pigeon.png"
-          alt="구구"
-          width={176}
-          height={148}
-          priority
-          className="h-auto w-[176px]"
-        />
-        <Image
-          src="/images/splash-logo-gugu-letter.png"
+          src="/images/splash-logo.png"
           alt="GUGU LETTER"
-          width={160}
-          height={98}
+          width={200}
+          height={333}
           priority
-          className="mt-10 h-auto w-[160px]"
+          className="h-auto w-[200px]"
         />
         <h1 className="mt-12 text-center text-[22px] font-extrabold leading-snug text-[#8A8A8A]">
           소중한 마음을

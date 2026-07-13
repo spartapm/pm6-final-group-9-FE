@@ -22,16 +22,16 @@ function formatLetterDate(iso: string) {
 }
 
 function SentLetterCard({
-  senderLabel,
+  receiverLabel,
   content,
 }: {
-  senderLabel: string;
+  receiverLabel: string;
   content: string;
 }) {
   return (
     <article className="w-full rounded-[16px] border border-black bg-white px-6 py-5">
       <p className="text-[18px] font-semibold text-[#1F1F1F]">
-        From. {senderLabel}
+        To. {receiverLabel}
       </p>
       <p className="mt-4 whitespace-pre-wrap text-[14px] leading-[1.5] tracking-[-0.32px] text-[#191F28]">
         {content}
@@ -91,10 +91,8 @@ export default function SentDetailPage() {
     );
   }
 
-  const senderLabel = letter
-    ? letter.is_anonymous
-      ? "익명"
-      : letter.sender_nickname
+  const receiverLabel = letter
+    ? (letter.receiver_nickname ?? "친구")
     : "";
   const isLinkUnclaimed =
     letter?.delivery_type === "link" && !letter.receiver_id;
@@ -114,7 +112,10 @@ export default function SentDetailPage() {
       <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">
         <div className="w-full -translate-y-5">
           {letter ? (
-            <SentLetterCard senderLabel={senderLabel} content={letter.content} />
+            <SentLetterCard
+              receiverLabel={receiverLabel}
+              content={letter.content}
+            />
           ) : isPending ? (
             <LetterDetailSkeleton />
           ) : null}

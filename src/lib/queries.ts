@@ -57,7 +57,11 @@ export function useSentLetter(id: string) {
     queryKey: queryKeys.letterSent(id),
     queryFn: () =>
       apiFetch<{
-        data: Letter & { reaction: string | null; is_opened: boolean };
+        data: Letter & {
+          reaction: string | null;
+          is_opened: boolean;
+          receiver_nickname: string | null;
+        };
       }>(`/letters/sent/${id}`).then((r) => r.data),
   });
 }

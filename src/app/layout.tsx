@@ -10,10 +10,22 @@ const notoSansKr = Noto_Sans_KR({
   display: "swap",
 });
 
+function resolveMetadataBase(): URL {
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const candidate = raw
+    ? /^https?:\/\//i.test(raw)
+      ? raw
+      : `https://${raw}`
+    : "http://localhost:3000";
+  try {
+    return new URL(candidate);
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: resolveMetadataBase(),
   title: "구구레터",
   description: "소중한 마음을 전하는 쪽지",
   openGraph: {

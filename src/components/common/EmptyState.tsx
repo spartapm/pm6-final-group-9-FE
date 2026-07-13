@@ -21,12 +21,12 @@ export function EmptyState({
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10 text-center">
       <Image src={imageSrc} alt="" width={65} height={57} className="h-[57px] w-[65px]" aria-hidden />
-      <div>
-        <p className="text-base font-semibold text-[var(--color-text-body)]">
+      <div className="leading-[1.6]">
+        <p className="text-[15px] font-medium text-[var(--color-text-muted)]">
           {title}
         </p>
         {description ? (
-          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+          <p className="text-[15px] font-medium text-[var(--color-text-muted)]">
             {description}
           </p>
         ) : null}

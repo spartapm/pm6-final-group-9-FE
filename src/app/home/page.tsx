@@ -266,6 +266,7 @@ export default function HomePage() {
 
   function renderReceivedCard(letter: Letter) {
     const senderName = letter.is_anonymous ? "익명" : letter.sender_nickname;
+    const read = Boolean(letter.read_at);
 
     return (
       <Link
@@ -278,15 +279,21 @@ export default function HomePage() {
             alt=""
             width={17}
             height={24}
-            className="mt-0.5 h-[24px] w-[17px] shrink-0"
+            className={`mt-0.5 h-[24px] w-[17px] shrink-0 ${
+              read ? "opacity-30" : "opacity-100"
+            }`}
             aria-hidden
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] text-black">
+            <p className={`text-[14px] ${read ? "text-[#929292]" : "text-black"}`}>
               <span className="font-bold">{senderName}</span>
               <span className="font-medium">님이 쪽지를 보냈어요</span>
             </p>
-            <p className="mt-2 text-[14px] leading-[1.45] text-black">
+            <p
+              className={`mt-2 text-[14px] leading-[1.45] ${
+                read ? "text-[#C5C5C5]" : "text-black"
+              }`}
+            >
               {truncate(letter.content)}
             </p>
             {letter.reaction ? (
@@ -445,15 +452,15 @@ export default function HomePage() {
               <EmptyState
                 title={
                   tab === "received"
-                    ? "아직 받은 쪽지가 없어요"
-                    : "아직 보낸 쪽지가 없어요"
+                    ? "아직 받은 쪽지가 없어요."
+                    : "아직 보낸 쪽지가 없어요."
                 }
                 description={
                   tab === "received"
-                    ? "내 쪽지함 링크를 공유해 보세요."
-                    : "하단 ‘쪽지 보내기’에서 쪽지를 보내보세요."
+                    ? "내 쪽지함을 공유해 보세요!"
+                    : "소중한 마음을 보내보세요!"
                 }
-                imageSrc="/images/empty-inbox.svg"
+                imageSrc="/images/empty-letter.png"
               />
             ) : (
               <ul className="space-y-3">

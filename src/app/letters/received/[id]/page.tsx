@@ -14,7 +14,12 @@ import { toast } from "@/components/common/Toast";
 import { track } from "@/lib/analytics";
 import { useReceivedLetter, queryKeys } from "@/lib/queries";
 import { ShareableLetterCard, preloadShareAssets, SHARE_CARD_CAPTURE_OPTIONS } from "@/components/letter/ShareableLetterCard";
-import { REACTION_LABELS, REACTION_OPTIONS } from "@/types";
+import { REACTION_LABELS, REACTION_OPTIONS, type Letter } from "@/types";
+
+type ReceivedListCache = {
+  pages: { items: Letter[]; nextCursor: string | null }[];
+  pageParams: unknown[];
+};
 
 function formatReceivedDate(iso: string) {
   const d = new Date(iso);
@@ -115,6 +120,29 @@ export default function ReceivedDetailPage() {
       setReaction(letter.reaction ?? null);
     }
   }, [letter]);
+
+  useEffect(() => {
+    if (!letter?.id || !letter.read_at) return;
+    const readAt = letter.read_at;
+    queryClient.setQueryData<ReceivedListCache>(
+      queryKeys.letters("received"),
+      (prev) => {
+        if (!prev) return prev;
+        let changed = false;
+        const pages = prev.pages.map((page) => {
+          const items = page.items.map((item) => {
+            if (item.id === letter.id && !item.read_at) {
+              changed = true;
+              return { ...item, read_at: readAt };
+            }
+            return item;
+          });
+          return items === page.items ? page : { ...page, items };
+        });
+        return changed ? { ...prev, pages } : prev;
+      }
+    );
+  }, [letter?.id, letter?.read_at, queryClient]);
 
   useEffect(() => {
     if (queryError instanceof ApiError && queryError.status === 401) {

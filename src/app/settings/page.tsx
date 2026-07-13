@@ -110,9 +110,9 @@ export default function SettingsPage() {
     setBusy(true);
     try {
       const supabase = createClient();
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       queryClient.clear();
-      window.location.replace("/onboarding");
+      window.location.replace("/splash");
     } catch {
       toast("로그아웃에 실패했어요. 다시 시도해주세요.");
       setBusy(false);
@@ -126,9 +126,9 @@ export default function SettingsPage() {
     try {
       await apiFetch("/profiles/me", { method: "DELETE" });
       const supabase = createClient();
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       queryClient.clear();
-      window.location.replace("/onboarding");
+      window.location.replace("/splash");
     } catch {
       toast("회원탈퇴에 실패했어요. 다시 시도해주세요.");
       setBusy(false);

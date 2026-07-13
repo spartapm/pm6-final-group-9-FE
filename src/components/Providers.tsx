@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { ToastHost } from "@/components/common/Toast";
+import { PostHogProvider } from "@/components/PostHogProvider";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -24,8 +25,10 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      {children}
-      <ToastHost />
+      <PostHogProvider>
+        {children}
+        <ToastHost />
+      </PostHogProvider>
     </QueryClientProvider>
   );
 }

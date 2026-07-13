@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 
 const SHARE_BG = "#f5f3ed";
-const SHARE_LOGO_SRC = "/images/splash-logo-gugu-letter.png";
+const SHARE_LOGO_SRC = "/images/share-logo.png";
 
 type ShareableLetterCardProps = {
   senderLabel: string;
@@ -33,9 +33,9 @@ export const ShareableLetterCard = forwardRef<
       <img
         src={SHARE_LOGO_SRC}
         alt=""
-        width={160}
-        height={98}
-        className="mt-12 h-auto w-[160px]"
+        width={150}
+        height={28}
+        className="mt-12 h-auto w-[150px]"
         draggable={false}
       />
     </div>

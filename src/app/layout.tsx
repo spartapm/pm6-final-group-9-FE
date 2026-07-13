@@ -33,10 +33,10 @@ export const metadata: Metadata = {
     description: "소중한 마음을 전하는 쪽지",
     images: [
       {
-        url: "/images/og-image.png",
-        width: 417,
-        height: 408,
-        alt: "GUGU LETTER",
+        url: "/images/og-cover.png",
+        width: 1200,
+        height: 630,
+        alt: "구구레터",
       },
     ],
   },
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "구구레터",
     description: "소중한 마음을 전하는 쪽지",
-    images: ["/images/og-image.png"],
+    images: ["/images/og-cover.png"],
   },
 };
 

@@ -31,9 +31,9 @@ export function useLetters(tab: "received" | "sent", enabled = true) {
     queryFn: ({ pageParam }) => {
       const base =
         tab === "received" ? "/letters/received" : "/letters/sent";
-      const path = pageParam
-        ? `${base}?cursor=${pageParam}&limit=20`
-        : `${base}?limit=20`;
+      const params = new URLSearchParams({ limit: "20" });
+      if (pageParam) params.set("cursor", pageParam);
+      const path = `${base}?${params.toString()}`;
       return apiFetch<LetterListResponse>(path).then((r) => r.data);
     },
     initialPageParam: null as string | null,

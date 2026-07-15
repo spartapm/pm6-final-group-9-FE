@@ -3,13 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { WriteLetterForm } from "@/components/letter/WriteLetterForm";
 import { ProfileHeaderSkeleton } from "@/components/common/ContentSkeleton";
 import { ApiError } from "@/lib/api-client";
 import { ErrorState } from "@/components/common/ErrorState";
 import { track } from "@/lib/analytics";
 import { usePublicProfile } from "@/lib/queries";
+import { createClient } from "@/lib/supabase/client";
 
 function FriendHomeHeader() {
   return (
@@ -45,8 +46,16 @@ function FriendHomeHeader() {
 export default function PublicHomePage() {
   const params = useParams<{ userId: string }>();
   const { data: profile, error, isPending } = usePublicProfile(params.userId);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const publicPath = `/u/${params.userId}`;
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setIsLoggedIn(Boolean(data.user));
+    });
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -99,7 +108,11 @@ export default function PublicHomePage() {
               returnUrl={publicPath}
               completeBackPath={publicPath}
               showTitle={false}
-              submitLabel="친구에게 쪽지 써주기"
+              submitLabel={
+                isLoggedIn
+                  ? "친구에게 쪽지 써주기"
+                  : "로그인하고 쪽지 보내기"
+              }
               showSubmitIcon
             />
           ) : null}

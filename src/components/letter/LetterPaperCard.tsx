@@ -16,19 +16,19 @@ export function LetterPaperCard({
 }: LetterPaperCardProps) {
   return (
     <article
-      className={`flex w-full flex-col gap-4 rounded-[16px] border border-black bg-white px-6 py-5 ${className}`}
+      className={`flex w-full flex-col gap-5 rounded-[16px] border border-black bg-white px-6 py-5 ${className}`}
     >
-      <p className="text-[16px] font-semibold text-[var(--color-text)]">
+      <p className="text-[18px] font-semibold text-[var(--color-text)]">
         To. {toLabel}
       </p>
-      <p className="whitespace-pre-wrap text-[16px] leading-[1.6] tracking-[-0.32px] text-[var(--color-primary)]">
+      <p className="whitespace-pre-wrap text-[16px] leading-[1.5] tracking-[-0.32px] text-[var(--color-letter-ink)]">
         {content}
       </p>
-      <p className="text-right text-[16px] font-semibold text-[var(--color-text)]">
+      <p className="text-right text-[18px] font-semibold text-[var(--color-text)]">
         From. {fromLabel}
       </p>
       {footer ? (
-        <p className="text-right text-[12px] text-[var(--color-text-secondary)]">
+        <p className="-mt-3 text-right text-[12px] font-medium text-[#787878]">
           {footer}
         </p>
       ) : null}

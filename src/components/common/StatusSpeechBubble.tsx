@@ -18,7 +18,7 @@ type StatusSpeechBubbleProps = {
   error?: boolean;
 };
 
-/** 꼬리 있는 상태메시지 말풍선 (Figma Union) */
+/** 꼬리 있는 상태메시지 말풍선 */
 export function StatusSpeechBubble({
   children,
   editing = false,
@@ -34,19 +34,19 @@ export function StatusSpeechBubble({
   error = false,
 }: StatusSpeechBubbleProps) {
   return (
-    <div
-      className={`relative mx-auto mt-3 w-full max-w-[307px] ${
-        error ? "outline outline-1 outline-[#E53935] outline-offset-[-1px] rounded-[12px]" : ""
-      }`}
-    >
+    <div className="relative mx-auto mt-3 w-full max-w-[307px]">
       <FigmaImage
-        src="/images/figma/status-bubble-union.svg"
+        src={
+          error
+            ? "/images/figma/status-bubble-union-error.png"
+            : "/images/figma/status-bubble-union.png"
+        }
         alt=""
         width={307}
         height={58}
         className="h-auto w-full"
       />
-      <div className="absolute inset-0 flex items-center px-5 pt-3.5">
+      <div className="absolute inset-x-0 bottom-0 flex h-[44px] items-center px-5">
         {editing ? (
           <input
             ref={inputRef}
@@ -62,14 +62,14 @@ export function StatusSpeechBubble({
               }
             }}
             onBlur={() => onSave?.()}
-            className="w-full bg-transparent pr-8 text-center text-[14px] text-[var(--color-text-secondary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
+            className="w-full bg-transparent py-3 pr-8 text-center text-[14px] text-[var(--color-text-secondary)] outline-none placeholder:text-[var(--color-text-placeholder)] focus:placeholder:text-transparent"
           />
         ) : (
           <button
             type="button"
             onClick={showEdit ? onStartEdit : undefined}
             disabled={!showEdit}
-            className={`flex-1 text-center text-[14px] leading-snug text-[var(--color-text-secondary)] ${
+            className={`flex-1 py-3 text-center text-[14px] leading-snug text-[var(--color-text-secondary)] ${
               showEdit ? "pr-8" : "cursor-default"
             }`}
           >
@@ -87,7 +87,7 @@ export function StatusSpeechBubble({
               }
               onStartEdit?.();
             }}
-            className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center pt-2"
+            className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center"
             aria-label={editing ? "상태메시지 저장" : "상태메시지 수정"}
           >
             <FigmaImage

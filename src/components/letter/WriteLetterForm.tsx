@@ -160,12 +160,18 @@ export function WriteLetterForm({
 
   return (
     <div
-      className={`flex flex-col px-[30px] pt-4 pb-2 ${
-        fillHeight ? "flex-1" : ""
-      }`}
+      className={`flex flex-col px-[30px] pb-2 ${
+        isMyHome ? "pt-8" : "pt-4"
+      } ${fillHeight ? "flex-1" : ""}`}
     >
       {topGuide ? (
-        <p className="mb-6 whitespace-pre-line text-center text-[18px] font-semibold leading-[1.5] tracking-[-0.2px] text-[var(--color-text-guide)]">
+        <p
+          className={`mb-6 whitespace-pre-line text-center text-[18px] leading-[1.5] tracking-[-0.2px] ${
+            isMyHome
+              ? "font-semibold text-[var(--color-text-guide)]"
+              : "font-bold text-black"
+          }`}
+        >
           {topGuide}
         </p>
       ) : showTitle ? (
@@ -188,39 +194,40 @@ export function WriteLetterForm({
             value={toNickname}
             maxLength={20}
             onChange={(e) => setToNickname(e.target.value)}
-            placeholder="받는 이"
-            className="min-w-0 flex-1 border-b border-black bg-transparent pb-1 text-[18px] font-medium text-black outline-none placeholder:text-[var(--color-text-disabled)]"
+            className="min-w-0 max-w-[131px] flex-1 border-b border-black bg-transparent pb-1 text-center text-[18px] font-medium text-black outline-none"
           />
         )}
       </div>
 
-      {/* Content — 390px 높이 흰 카드 */}
+      {/* Content — 시안 높이 390px */}
       <div
-        className="relative h-[min(390px,52vh)] rounded-2xl bg-white"
+        className={`relative rounded-[16px] bg-white ${
+          isMyHome ? "h-[390px]" : "h-[min(390px,52vh)]"
+        }`}
         onClick={showGuideOverlay ? focusContent : undefined}
       >
         {showGuideOverlay ? (
-          <div className="pointer-events-none absolute inset-0 z-10 overflow-y-auto rounded-2xl px-5 py-6">
-            <p className="text-[16px] leading-6 text-[var(--color-text-disabled)]">
+          <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-[16px] px-5 py-5">
+            <p className="text-[14px] leading-[1.5] text-[var(--color-text-disabled)]">
               마음을 전하는 게 서툴고 막막하다면?
               <br />
               아래 중 하나만 골라 이야기를 시작해 보세요.
             </p>
-            <div className="mt-5 space-y-3">
+            <div className="mt-4 space-y-2.5">
               {MESSAGE_GUIDES.map((guide) => (
                 <div key={guide.id} className="flex gap-2.5 text-left">
                   <FigmaImage
                     src={GUIDE_ICONS[guide.id] ?? GUIDE_ICONS.thanks}
                     alt=""
-                    width={16}
-                    height={16}
-                    className="mt-1 h-4 w-4 shrink-0 object-contain opacity-70"
+                    width={14}
+                    height={14}
+                    className="mt-1 h-3.5 w-3.5 shrink-0 object-contain opacity-70"
                   />
                   <div>
-                    <p className="text-[16px] font-medium leading-7 text-[var(--color-text-disabled)]">
+                    <p className="text-[14px] font-medium leading-6 text-[var(--color-text-disabled)]">
                       {guide.label}
                     </p>
-                    <p className="text-[16px] leading-7 text-[var(--color-text-disabled)]">
+                    <p className="text-[14px] leading-6 text-[var(--color-text-disabled)]">
                       {guide.placeholder}
                     </p>
                   </div>
@@ -243,23 +250,11 @@ export function WriteLetterForm({
             e.stopPropagation();
             focusContent();
           }}
-          className="h-full w-full resize-none rounded-2xl bg-transparent p-5 text-[16px] leading-[1.6] tracking-[-0.32px] text-[var(--color-primary)] outline-none"
+          className="h-full w-full resize-none rounded-[16px] bg-transparent p-5 pb-10 text-[16px] leading-[1.6] tracking-[-0.32px] text-[var(--color-primary)] outline-none"
         />
-      </div>
 
-      <div className="mt-2 flex items-center justify-between">
-        {isAtLimit ? (
-          <p className="flex items-center gap-1.5 text-[15px] font-medium text-[#F04452]">
-            최대글자수 제한
-            <span className="flex h-[13px] w-[13px] items-center justify-center rounded-full border border-[#F04452] text-[10px]">
-              !
-            </span>
-          </p>
-        ) : (
-          <span />
-        )}
         <p
-          className={`text-[15px] font-medium ${
+          className={`pointer-events-none absolute bottom-4 right-5 text-[15px] font-medium ${
             isAtLimit ? "text-[#F42762]" : "text-[var(--color-text-disabled)]"
           }`}
         >
@@ -267,8 +262,17 @@ export function WriteLetterForm({
         </p>
       </div>
 
-      {/* From — 중앙 + 언더라인 */}
-      <div className="mt-4 flex items-end justify-center gap-2">
+      {isAtLimit ? (
+        <p className="mt-2 flex items-center gap-1.5 text-[15px] font-medium text-[#F04452]">
+          최대글자수 제한
+          <span className="flex h-[13px] w-[13px] items-center justify-center rounded-full border border-[#F04452] text-[10px]">
+            !
+          </span>
+        </p>
+      ) : null}
+
+      {/* From — 오른쪽 정렬 + 언더라인 */}
+      <div className="mt-4 flex items-end justify-end gap-2">
         <span className="shrink-0 pb-1 text-[18px] font-medium text-black">
           From.
         </span>
@@ -281,8 +285,7 @@ export function WriteLetterForm({
             value={senderNickname}
             maxLength={20}
             onChange={(e) => setSenderNickname(e.target.value)}
-            placeholder="보내는 이"
-            className="w-[131px] border-b border-black bg-transparent pb-1 text-center text-[18px] font-medium text-black outline-none placeholder:text-[var(--color-text-disabled)]"
+            className="w-[131px] border-b border-black bg-transparent pb-1 text-center text-[18px] font-medium text-black outline-none"
           />
         )}
       </div>

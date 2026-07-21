@@ -22,6 +22,8 @@ export default function WritePreviewPage() {
   const sendingRef = useRef(false);
 
   useEffect(() => {
+    // 전송 완료 후 clearDraft로 draft가 비워질 때 /write로 튕기지 않도록 가드
+    if (sendingRef.current) return;
     if (!draft?.content || !draft.senderNickname) {
       router.replace("/write");
     }
@@ -113,7 +115,7 @@ export default function WritePreviewPage() {
         variant="content"
       />
 
-      <div className="flex flex-1 flex-col px-[30px] pb-8 pt-8">
+      <div className="flex flex-1 flex-col px-[30px] pb-8 pt-16">
         <h1 className="text-center text-[20px] font-semibold tracking-[-0.22px] text-[#484848]">
           쪽지가 완성되었어요!
         </h1>

@@ -7,7 +7,6 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomNav, mainTabPaddingClass } from "@/components/layout/BottomNav";
 import { GuideTooltip } from "@/components/common/GuideTooltip";
 import { toast } from "@/components/common/Toast";
-import { PrimaryButton } from "@/components/ui/Button";
 import { FigmaImage } from "@/components/ui/FigmaImage";
 
 function CompleteContent() {
@@ -28,21 +27,6 @@ function CompleteContent() {
       toast("링크 복사에 실패했어요. 다시 시도해주세요.", { variant: "error" });
     } finally {
       setCopying(false);
-    }
-  }
-
-  async function shareLink() {
-    if (!shareUrl) return;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ url: shareUrl });
-        return;
-      }
-      await copyLink();
-    } catch (e) {
-      if (e instanceof Error && e.name === "AbortError") return;
-      await copyLink();
     }
   }
 
@@ -86,7 +70,7 @@ function CompleteContent() {
     >
       <AppHeader backHref="/write" backLabel="" variant="content" />
 
-      <div className="flex flex-1 flex-col px-[34px] pb-8 pt-4">
+      <div className="flex flex-1 flex-col px-[34px] pb-8 pt-6">
         <div className="flex flex-1 flex-col items-center">
           <FigmaImage
             src="/images/figma/success-gugu.svg"
@@ -110,28 +94,28 @@ function CompleteContent() {
                 type="button"
                 onClick={copyLink}
                 disabled={copying}
-                className="flex h-[53px] w-full items-center justify-center overflow-hidden rounded-2xl bg-white px-4"
+                className="flex h-[53px] w-full items-center gap-2 overflow-hidden rounded-[16px] bg-white px-4 disabled:opacity-70"
               >
-                <span className="truncate text-[18px] text-black">
+                <span className="min-w-0 flex-1 truncate text-center text-[18px] text-black">
                   {shareUrl}
                 </span>
+                <FigmaImage
+                  src="/images/figma/icon-link-copy.svg"
+                  alt=""
+                  width={16}
+                  height={16}
+                  className="h-4 w-4 shrink-0"
+                />
               </button>
+              <p className="mt-5 text-center text-[15px] text-black">
+                공유하지 않으면 보내지지 않아요
+              </p>
             </div>
           ) : null}
-        </div>
-
-        <div className="mt-8 space-y-4">
-          <p className="text-center text-[15px] text-black">
-            공유하지 않으면 보내지지 않아요
-          </p>
-
-          <PrimaryButton onClick={shareLink}>
-            친구에게 쪽지 링크로 보내기
-          </PrimaryButton>
 
           <Link
             href="/home"
-            className="block text-center text-[15px] text-black underline underline-offset-2"
+            className="mt-auto pt-16 text-center text-[15px] text-black underline underline-offset-2"
           >
             홈으로 돌아가기
           </Link>

@@ -25,6 +25,7 @@ export type Letter = {
   reaction?: string | null;
   is_opened?: boolean;
   receiver_nickname?: string | null;
+  shareUrl?: string | null;
 };
 
 export type LetterDraft = {

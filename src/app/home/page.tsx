@@ -329,7 +329,7 @@ export default function HomePage() {
               </span>
             ) : null}
             <p className="mt-3 text-right text-[12px] text-[var(--color-text-disabled)]">
-              {formatLetterDate(letter.created_at)}
+              {formatLetterDate(letter.created_at)} 보냄
             </p>
           </div>
         </div>
@@ -388,7 +388,7 @@ export default function HomePage() {
               </span>
             ) : null}
             <p className="mt-3 text-right text-[12px] text-[var(--color-text-disabled)]">
-              {formatLetterDate(letter.created_at)}
+              {formatLetterDate(letter.created_at)} 받음
             </p>
           </div>
         </div>
@@ -417,45 +417,48 @@ export default function HomePage() {
 
       <AppHeader centered settingsHref="/settings" />
 
-      <div className="mx-6 mb-4 flex flex-1 flex-col overflow-hidden rounded-[10px] border border-black">
-        <section className="relative px-5 pb-4 pt-5">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <section className="relative px-6 pb-4 pt-2">
           {profile ? (
             <>
-              <div className="relative flex items-center justify-center">
+              <div className="flex items-center justify-center">
                 <h1 className="text-center text-[18px] tracking-[-0.5px] text-[var(--color-text-secondary)]">
                   <span className="font-semibold text-black">
                     {profile.nickname}
                   </span>
                   의 쪽지함
                 </h1>
-                <button
-                  type="button"
-                  onClick={() => copyHomeLink(profile)}
-                  className="absolute right-0 flex h-8 w-8 items-center justify-center"
-                  aria-label="쪽지함 공유하기"
-                >
-                  <FigmaImage
-                    src="/images/figma/icon-share-home.svg"
-                    alt=""
-                    width={16}
-                    height={16}
-                    className="h-4 w-4"
-                  />
-                </button>
-                {showShareTip ? (
-                  <div className="absolute -bottom-12 left-1/2 z-20 -translate-x-1/2">
-                    <GuideTooltip
-                      arrow="top"
-                      emoji={null}
-                      onClose={dismissShareTip}
-                    >
-                      내 쪽지함 링크를 공유하고 쪽지를 받아보세요!
-                    </GuideTooltip>
-                  </div>
-                ) : null}
+                <div className="relative ml-0.5">
+                  <button
+                    type="button"
+                    onClick={() => copyHomeLink(profile)}
+                    className="flex h-8 w-8 items-center justify-center"
+                    aria-label="쪽지함 공유하기"
+                  >
+                    <FigmaImage
+                      src="/images/figma/icon-share-home.svg"
+                      alt=""
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
+                    />
+                  </button>
+                  {showShareTip ? (
+                    <div className="absolute left-1/2 top-full z-20 mt-1 w-max -translate-x-[70%]">
+                      <GuideTooltip
+                        arrow="top"
+                        arrowLeft="70%"
+                        emoji={null}
+                        onClose={dismissShareTip}
+                      >
+                        내 쪽지함 링크를 공유하고 쪽지를 받아보세요!
+                      </GuideTooltip>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
-              <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-[var(--color-text-placeholder)]">
+              <div className="mt-1 flex items-center justify-center gap-2 text-[10px] text-[var(--color-text-placeholder)]">
                 <span>받은 횟수 {profile.received_count ?? 0}</span>
                 <span className="text-[var(--color-border)]">|</span>
                 <span>보낸 횟수 {profile.sent_count ?? 0}</span>
@@ -545,6 +548,7 @@ export default function HomePage() {
                     : "소중한 마음을 보내보세요!"
                 }
                 imageSrc="/images/figma/icon-empty-letter.svg"
+                imageWidth={110}
               />
             ) : (
               <ul className="space-y-3">

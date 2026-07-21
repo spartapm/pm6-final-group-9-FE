@@ -96,8 +96,7 @@ export default function ReceivedDetailPage() {
   const [sharing, setSharing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reaction, setReaction] = useState<string | null>(null);
-  // 상세 진입 시 감정 이모지 답장 영역을 펼친 상태로 노출
-  const [reactionOpen, setReactionOpen] = useState(true);
+  const [reactionOpen, setReactionOpen] = useState(false);
 
   useEffect(() => {
     if (letter) {
@@ -179,8 +178,18 @@ export default function ReceivedDetailPage() {
     }
   }
 
+  async function captureShareCard() {
+    if (!letter || !shareRef.current) return null;
+    track("share_card_generate_start", {
+      letter_id: letter.id,
+      card_template_id: "default_card",
+    });
+    await preloadShareAssets();
+    return toPng(shareRef.current, SHARE_CARD_CAPTURE_OPTIONS);
+  }
+
   async function openSharePreview() {
-    if (!letter || !shareRef.current || generating) return;
+    if (!letter || generating) return;
     setGenerating(true);
     track("share_card_image_icon_click", {
       letter_id: letter.id,
@@ -188,12 +197,8 @@ export default function ReceivedDetailPage() {
       sender_id: letter.sender_id,
     });
     try {
-      track("share_card_generate_start", {
-        letter_id: letter.id,
-        card_template_id: "default_card",
-      });
-      await preloadShareAssets();
-      const dataUrl = await toPng(shareRef.current, SHARE_CARD_CAPTURE_OPTIONS);
+      const dataUrl = await captureShareCard();
+      if (!dataUrl) return;
       setPreviewUrl(dataUrl);
       track("share_card_preview_view", {
         letter_id: letter.id,
@@ -204,6 +209,24 @@ export default function ReceivedDetailPage() {
       track("share_card_external_share_fail", {
         letter_id: letter.id,
         error_code: "generate_fail",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function downloadShareCard() {
+    if (!letter || generating) return;
+    setGenerating(true);
+    try {
+      const dataUrl = await captureShareCard();
+      if (!dataUrl) return;
+      saveImage(dataUrl);
+    } catch {
+      toast("이미지를 저장하지 못했어요. 다시 시도해주세요.");
+      track("share_card_external_share_fail", {
+        letter_id: letter.id,
+        error_code: "save_fail",
       });
     } finally {
       setGenerating(false);
@@ -323,8 +346,8 @@ export default function ReceivedDetailPage() {
       {error && !letter ? (
         <ErrorState title={error} onRetry={() => refetch()} />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">
-          <div className="w-full -translate-y-5">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-8">
+          <div className="my-auto w-full">
             {letter ? (
               <LetterPaperCard
                 toLabel={toLabel}
@@ -337,104 +360,123 @@ export default function ReceivedDetailPage() {
             ) : null}
 
             {letter ? (
-              <div className="mt-6">
-          {reactionOpen ? (
-            <section className="rounded-[17px] bg-[rgba(232,232,232,0.76)] px-4 pb-5 pt-4">
-              <div className="flex items-start gap-2">
-                <FigmaImage
-                  src="/images/icon-face-add.svg"
-                  alt=""
-                  width={19}
-                  height={19}
-                  className="mt-0.5 h-[19px] w-[19px]"
-                />
-                <div>
-                  <p className="text-[12px] font-medium tracking-[-0.24px] text-black">
-                    감정 이모지로 답장하기
-                  </p>
-                  <p className="mt-1 text-[10px] font-medium tracking-[-0.2px] text-[#6B6B6B]">
-                    1개만 선택해주세요! 이모지는 다시 고를 수 있어요.
-                  </p>
-                </div>
-              </div>
+              <div className="mt-5">
+                {reactionOpen ? (
+                  <section className="rounded-[17px] bg-[rgba(232,232,232,0.76)] px-4 pb-5 pt-4">
+                    <div className="flex items-start gap-2">
+                      <FigmaImage
+                        src="/images/icon-face-add.svg"
+                        alt=""
+                        width={19}
+                        height={19}
+                        className="mt-0.5 h-[19px] w-[19px]"
+                      />
+                      <div>
+                        <p className="text-[12px] font-medium tracking-[-0.24px] text-black">
+                          감정 이모지로 답장하기
+                        </p>
+                        <p className="mt-1 text-[10px] font-medium tracking-[-0.2px] text-[#6B6B6B]">
+                          1개만 선택해주세요! 이모지는 다시 고를 수 있어요.
+                        </p>
+                      </div>
+                    </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {REACTION_OPTIONS.map((item) => {
-                  const selected = activeReaction === item.emoji;
-                  return (
-                    <button
-                      key={item.emoji}
-                      type="button"
-                      onClick={() => onReaction(item.emoji)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[14px] font-semibold transition active:scale-[0.98] ${
-                        selected
-                          ? "bg-[#2A2A2A] text-white"
-                          : "border border-[#C5C5C5] bg-[rgba(255,255,255,0.8)] text-[#1F1F1F]"
-                      }`}
-                    >
-                      <span className="text-[19px] leading-none">{item.emoji}</span>
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ) : (
-            <div className="flex items-start justify-between gap-3">
-              {activeReaction ? (
-                <button
-                  type="button"
-                  onClick={() => setReactionOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#191F28] px-3 py-2 text-[14px] font-semibold text-white"
-                >
-                  <span className="text-[19px] leading-none">{activeReaction}</span>
-                  <span>{REACTION_LABELS[activeReaction] ?? ""}</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setReactionOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#2C2C2C] px-4 py-2"
-                >
-                  <FigmaImage
-                    src="/images/icon-face-add.svg"
-                    alt=""
-                    width={19}
-                    height={19}
-                    className="h-[19px] w-[19px] invert"
-                  />
-                  <span className="text-[12px] font-medium tracking-[-0.24px] text-white">
-                    감정 이모지로 답장하기
-                  </span>
-                </button>
-              )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {REACTION_OPTIONS.map((item) => {
+                        const selected = activeReaction === item.emoji;
+                        return (
+                          <button
+                            key={item.emoji}
+                            type="button"
+                            onClick={() => onReaction(item.emoji)}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[14px] font-semibold transition active:scale-[0.98] ${
+                              selected
+                                ? "bg-[#2A2A2A] text-white"
+                                : "border border-[#C5C5C5] bg-[rgba(255,255,255,0.8)] text-[#1F1F1F]"
+                            }`}
+                          >
+                            <span className="text-[19px] leading-none">
+                              {item.emoji}
+                            </span>
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    {activeReaction ? (
+                      <button
+                        type="button"
+                        onClick={() => setReactionOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#2C2C2C] px-3 py-2 text-[14px] font-semibold text-white"
+                      >
+                        <span className="text-[19px] leading-none">
+                          {activeReaction}
+                        </span>
+                        <span>{REACTION_LABELS[activeReaction] ?? ""}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setReactionOpen(true)}
+                        className="inline-flex h-[35px] items-center gap-2 rounded-full bg-[#2C2C2C] px-4"
+                      >
+                        <FigmaImage
+                          src="/images/figma/icon-face-add-white.svg"
+                          alt=""
+                          width={19}
+                          height={19}
+                          className="h-[19px] w-[19px]"
+                        />
+                        <span className="text-[12px] font-medium tracking-[-0.24px] text-white">
+                          감정 이모지로 답장하기
+                        </span>
+                      </button>
+                    )}
 
-              <div className="flex shrink-0 items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  disabled={generating}
-                  onClick={openSharePreview}
-                  className="flex h-8 w-8 items-center justify-center disabled:opacity-50"
-                  aria-label="이미지로 공유하기"
-                >
-                  {generating ? (
-                    <span
-                      className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-text-disabled)] border-t-[var(--color-primary)]"
-                      aria-hidden
-                    />
-                  ) : (
-                    <FigmaImage
-                      src="/images/icon-share-external.svg"
-                      alt=""
-                      width={18}
-                      height={18}
-                      className="h-[18px] w-[18px]"
-                    />
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
+                    <div className="flex shrink-0 items-center gap-3">
+                      <button
+                        type="button"
+                        disabled={generating}
+                        onClick={() => void downloadShareCard()}
+                        className="flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                        aria-label="이미지 저장"
+                      >
+                        {generating ? (
+                          <span
+                            className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-text-disabled)] border-t-[var(--color-primary)]"
+                            aria-hidden
+                          />
+                        ) : (
+                          <FigmaImage
+                            src="/images/figma/icon-download.svg"
+                            alt=""
+                            width={18}
+                            height={18}
+                            className="h-[18px] w-[18px]"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={generating}
+                        onClick={() => void openSharePreview()}
+                        className="flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                        aria-label="이미지로 공유하기"
+                      >
+                        <FigmaImage
+                          src="/images/figma/icon-share-nodes.svg"
+                          alt=""
+                          width={16}
+                          height={18}
+                          className="h-[18px] w-4"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : null}
           </div>
@@ -494,10 +536,10 @@ export default function ReceivedDetailPage() {
       ) : null}
 
       {letter && !hideReply ? (
-        <div className="shrink-0 border-t border-[var(--color-border-light)] bg-white px-0 pb-[env(safe-area-inset-bottom)]">
+        <div className="shrink-0 bg-[var(--color-primary-dark)] pb-[env(safe-area-inset-bottom)]">
           <Link
             href={`/letters/received/${letter.id}/reply`}
-            className="flex h-[66px] w-full items-center justify-center text-[16px] font-semibold text-[var(--color-text)]"
+            className="flex h-[66px] w-full items-center justify-center text-[18px] font-bold text-white"
           >
             답장하기
           </Link>

@@ -92,14 +92,16 @@ export function ToastHost() {
     message.variant === "error";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[120px] z-50 flex justify-center px-6">
-      <div
-        className="flex h-14 w-full max-w-[360px] items-center gap-3 rounded-2xl bg-[var(--color-primary-dark)] px-6 text-[16px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
-        role="status"
-        aria-live="polite"
-      >
-        {showIcon ? <ToastIcon variant={message.variant} /> : null}
-        <span className="text-left">{message.text}</span>
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center">
+      <div className="flex w-full max-w-[390px] justify-center px-4 pt-[148px]">
+        <div
+          className="flex h-14 w-full max-w-[360px] items-center gap-3 rounded-2xl bg-[var(--color-primary-dark)] px-6 text-[16px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
+          role="status"
+          aria-live="polite"
+        >
+          {showIcon ? <ToastIcon variant={message.variant} /> : null}
+          <span className="text-left">{message.text}</span>
+        </div>
       </div>
     </div>
   );

@@ -166,7 +166,7 @@ export default function SettingsPage() {
       <div className="flex flex-1 flex-col px-8 pb-10 pt-8">
         <div className="flex flex-col items-center">
           <div className="relative w-full max-w-[280px]">
-            <div className="flex items-center justify-center gap-2 pr-1">
+            <div className="relative flex items-center justify-center">
               <input
                 ref={inputRef}
                 value={nickname}
@@ -195,7 +195,7 @@ export default function SettingsPage() {
                     });
                   }
                 }}
-                className={`min-w-0 flex-1 bg-transparent text-center text-[20px] font-semibold tracking-[-1px] text-black outline-none ${
+                className={`mx-auto -my-3 w-[calc(100%-104px)] bg-transparent py-3 text-center text-[20px] font-semibold tracking-[-1px] text-black outline-none ${
                   isEditing ? "cursor-text" : "cursor-default"
                 }`}
               />
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handlePencilClick}
-                className="flex h-10 w-10 shrink-0 items-center justify-center"
+                className="absolute right-3 top-[calc(50%+6px)] flex h-10 w-10 shrink-0 -translate-y-1/2 items-center justify-center"
                 aria-label={isEditing ? "닉네임 저장" : "닉네임 수정"}
               >
                 <FigmaImage

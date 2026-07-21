@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ApiError, apiFetch } from "@/lib/api-client";
@@ -15,10 +14,15 @@ import {
 } from "@/components/common/ContentSkeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
+import { GuideTooltip } from "@/components/common/GuideTooltip";
+import { StatusSpeechBubble } from "@/components/common/StatusSpeechBubble";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomNav, mainTabPaddingClass } from "@/components/layout/BottomNav";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 import { TabBar } from "@/components/ui/TabBar";
 import { redirectToOnboarding } from "@/lib/auth-redirect";
+import { useLettersRealtime } from "@/hooks/useLettersRealtime";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import {
   flattenLetters,
   queryKeys,
@@ -27,6 +31,9 @@ import {
 } from "@/lib/queries";
 import type { Letter, Profile } from "@/types";
 import { REACTION_LABELS } from "@/types";
+
+const SHARE_TIP_KEY = "guguletter-share-tip-count";
+const SHARE_TIP_MAX = 3;
 
 type Tab = "received" | "sent";
 
@@ -53,7 +60,11 @@ export default function HomePage() {
   const [tab, setTab] = useState<Tab>("received");
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState("");
+  const [statusSaving, setStatusSaving] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [showShareTip, setShowShareTip] = useState(false);
+  const statusInputRef = useRef<HTMLInputElement>(null);
+  const savedStatusRef = useRef<string | null>(null);
 
   const {
     data: profile,
@@ -72,6 +83,17 @@ export default function HomePage() {
     isFetchNextPageError,
     isPending: lettersPending,
   } = useLetters(tab, authChecked && Boolean(profile));
+
+  useLettersRealtime(profile?.id, authChecked && Boolean(profile));
+
+  const onPullRefresh = useCallback(async () => {
+    await Promise.all([refetchProfile(), refetchLetters()]);
+  }, [refetchLetters, refetchProfile]);
+
+  const { refreshing, distance, indicatorStyle } = usePullToRefresh({
+    onRefresh: onPullRefresh,
+    disabled: !authChecked,
+  });
 
   const letters = flattenLetters(lettersData);
   const hasUnread =
@@ -139,10 +161,25 @@ export default function HomePage() {
 
   useEffect(() => {
     if (profile) {
-      setStatusDraft(profile.status_message ?? "");
+      if (!editingStatus) {
+        setStatusDraft(profile.status_message ?? "");
+        savedStatusRef.current = profile.status_message ?? "";
+      }
       track("my_home_view", { user_id: profile.id });
+
+      // 상태메시지 미설정 시 공유 안내 팝오버 (최대 3회)
+      if (!profile.status_message) {
+        try {
+          const count = Number(localStorage.getItem(SHARE_TIP_KEY) ?? "0");
+          if (count < SHARE_TIP_MAX) {
+            setShowShareTip(true);
+          }
+        } catch {
+          setShowShareTip(true);
+        }
+      }
     }
-  }, [profile]);
+  }, [profile, editingStatus]);
 
   useEffect(() => {
     if (profileError instanceof ApiError && profileError.status === 401) {
@@ -166,26 +203,63 @@ export default function HomePage() {
       await navigator.clipboard.writeText(url);
       toast("링크가 복사되었습니다", { variant: "success" });
       track("home_link_copy_success", { user_id: currentProfile.id });
+      dismissShareTip();
     } catch {
       toast("링크 복사에 실패했어요. 다시 시도해주세요.", { variant: "error" });
     }
   }
 
-  async function saveStatus() {
-    if (!profile) return;
+  function dismissShareTip() {
+    setShowShareTip(false);
     try {
-      const value = statusDraft.trim();
+      const count = Number(localStorage.getItem(SHARE_TIP_KEY) ?? "0");
+      localStorage.setItem(SHARE_TIP_KEY, String(Math.min(count + 1, SHARE_TIP_MAX)));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function saveStatus() {
+    if (!profile || statusSaving) return;
+    const value = statusDraft.trim();
+    const prev = (savedStatusRef.current ?? "").trim();
+    if (value === prev) {
+      setEditingStatus(false);
+      setStatusDraft(profile.status_message ?? "");
+      return;
+    }
+
+    setStatusSaving(true);
+    try {
       const res = await apiFetch<{ data: Profile }>("/profiles/me", {
         method: "PATCH",
         body: JSON.stringify({
           status_message: value === "" ? null : value,
         }),
       });
-      queryClient.setQueryData(queryKeys.profile, res.data);
+      // count 포함 응답 — 기존 캐시와 merge로 쪽지 수 유지 보장
+      queryClient.setQueryData(queryKeys.profile, (old: Profile | undefined) => ({
+        ...old,
+        ...res.data,
+        received_count: res.data.received_count ?? old?.received_count ?? 0,
+        sent_count: res.data.sent_count ?? old?.sent_count ?? 0,
+      }));
+      savedStatusRef.current = value;
       setEditingStatus(false);
     } catch {
       toast("저장하지 못했어요. 다시 시도해주세요.");
+    } finally {
+      setStatusSaving(false);
     }
+  }
+
+  function startEditStatus() {
+    if (!profile) return;
+    track("status_edit_click", { user_id: profile.id });
+    // placeholder만 있을 때는 빈 input으로 진입
+    setStatusDraft(profile.status_message ?? "");
+    setEditingStatus(true);
+    requestAnimationFrame(() => statusInputRef.current?.focus());
   }
 
   const showProfileError =
@@ -215,7 +289,7 @@ export default function HomePage() {
         className="block rounded-[10px] bg-white px-4 py-4 transition active:scale-[0.99]"
       >
         <div className="flex gap-2.5">
-          <Image
+          <FigmaImage
             src="/images/icon-letter.png"
             alt=""
             width={17}
@@ -223,13 +297,12 @@ export default function HomePage() {
             className={`mt-0.5 h-[24px] w-[17px] shrink-0 ${
               unread ? "opacity-30" : "opacity-100"
             }`}
-            aria-hidden
           />
           <div className="min-w-0 flex-1">
             <p
               className={`text-[14px] ${
                 unread
-                  ? "font-medium text-[#929292]"
+                  ? "font-medium text-[var(--color-text-muted)]"
                   : "text-black"
               }`}
             >
@@ -244,18 +317,18 @@ export default function HomePage() {
             </p>
             <p
               className={`mt-2 text-[14px] leading-[1.45] ${
-                unread ? "text-[#C5C5C5]" : "text-black"
+                unread ? "text-[var(--color-text-disabled)]" : "text-black"
               }`}
             >
               {truncate(letter.content)}
             </p>
             {letter.reaction && !unread ? (
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#474747] px-2.5 py-1 text-[12px] font-medium text-white">
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[12px] font-medium text-white">
                 <span>{letter.reaction}</span>
                 <span>{REACTION_LABELS[letter.reaction] ?? ""}</span>
               </span>
             ) : null}
-            <p className="mt-3 text-right text-[12px] text-[#C5C5C5]">
+            <p className="mt-3 text-right text-[12px] text-[var(--color-text-disabled)]">
               {formatLetterDate(letter.created_at)}
             </p>
           </div>
@@ -267,6 +340,9 @@ export default function HomePage() {
   function renderReceivedCard(letter: Letter) {
     const senderName = letter.is_anonymous ? "익명" : letter.sender_nickname;
     const read = Boolean(letter.read_at);
+    const title = letter.is_onboarding
+      ? "구구님이 쪽지를 보냈어요"
+      : null;
 
     return (
       <Link
@@ -274,7 +350,7 @@ export default function HomePage() {
         className="block rounded-[10px] bg-white px-4 py-4 transition active:scale-[0.99]"
       >
         <div className="flex gap-2.5">
-          <Image
+          <FigmaImage
             src="/images/icon-letter.png"
             alt=""
             width={17}
@@ -282,27 +358,36 @@ export default function HomePage() {
             className={`mt-0.5 h-[24px] w-[17px] shrink-0 ${
               read ? "opacity-30" : "opacity-100"
             }`}
-            aria-hidden
           />
           <div className="min-w-0 flex-1">
-            <p className={`text-[14px] ${read ? "text-[#929292]" : "text-black"}`}>
-              <span className="font-bold">{senderName}</span>
-              <span className="font-medium">님이 쪽지를 보냈어요</span>
+            <p
+              className={`text-[14px] ${
+                read ? "text-[var(--color-text-muted)]" : "text-black"
+              }`}
+            >
+              {title ? (
+                <span className="font-bold">{title}</span>
+              ) : (
+                <>
+                  <span className="font-bold">{senderName}</span>
+                  <span className="font-medium">님이 쪽지를 보냈어요</span>
+                </>
+              )}
             </p>
             <p
               className={`mt-2 text-[14px] leading-[1.45] ${
-                read ? "text-[#C5C5C5]" : "text-black"
+                read ? "text-[var(--color-text-disabled)]" : "text-black"
               }`}
             >
               {truncate(letter.content)}
             </p>
             {letter.reaction ? (
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#474747] px-2.5 py-1 text-[12px] font-medium text-white">
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[12px] font-medium text-white">
                 <span>{letter.reaction}</span>
                 <span>{REACTION_LABELS[letter.reaction] ?? ""}</span>
               </span>
             ) : null}
-            <p className="mt-3 text-right text-[12px] text-[#C5C5C5]">
+            <p className="mt-3 text-right text-[12px] text-[var(--color-text-disabled)]">
               {formatLetterDate(letter.created_at)}
             </p>
           </div>
@@ -320,86 +405,85 @@ export default function HomePage() {
 
   return (
     <main
-      className={`flex h-[100dvh] flex-col bg-white ${mainTabPaddingClass}`}
+      className={`flex h-[100dvh] flex-col overflow-hidden bg-white ${mainTabPaddingClass}`}
     >
+      <div
+        className="flex items-center justify-center overflow-hidden text-[12px] text-[#787878] transition-all"
+        style={indicatorStyle}
+        aria-hidden={!refreshing && distance < 8}
+      >
+        {refreshing || distance >= 40 ? "새로고침 중…" : distance > 8 ? "당겨서 새로고침" : null}
+      </div>
+
       <AppHeader centered settingsHref="/settings" />
 
       <div className="mx-6 mb-4 flex flex-1 flex-col overflow-hidden rounded-[10px] border border-black">
-        <section className="px-5 pb-4 pt-5">
+        <section className="relative px-5 pb-4 pt-5">
           {profile ? (
             <>
-              <h1 className="text-center text-[18px] tracking-[-0.5px] text-[var(--color-text-secondary)]">
-                <span className="font-semibold text-black">{profile.nickname}</span>
-                의 쪽지함
-              </h1>
-
-              <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-[var(--color-text-placeholder)]">
-                <span>보낸 횟수 {profile.sent_count ?? 0}</span>
-                <span className="text-[var(--color-border)]">|</span>
-                <span>받은 횟수 {profile.received_count ?? 0}</span>
-              </div>
-
-              <div>
-                <div
-                  className={`relative mt-4 flex items-center rounded-full border bg-[var(--color-surface-muted)] px-4 py-2.5 ${
-                    atStatusLimit
-                      ? "border-[#E53935]"
-                      : "border-[var(--color-border-light)]"
-                  }`}
+              <div className="relative flex items-center justify-center">
+                <h1 className="text-center text-[18px] tracking-[-0.5px] text-[var(--color-text-secondary)]">
+                  <span className="font-semibold text-black">
+                    {profile.nickname}
+                  </span>
+                  의 쪽지함
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => copyHomeLink(profile)}
+                  className="absolute right-0 flex h-8 w-8 items-center justify-center"
+                  aria-label="쪽지함 공유하기"
                 >
-                  {editingStatus ? (
-                    <input
-                      value={statusDraft}
-                      maxLength={STATUS_MESSAGE_MAX}
-                      onChange={(e) => setStatusDraft(e.target.value)}
-                      placeholder="상태메시지를 작성해주세요"
-                      className="w-full bg-transparent pr-8 text-[13px] text-[var(--color-text-secondary)] outline-none"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveStatus();
-                      }}
-                    />
-                  ) : (
-                    <p className="flex-1 pr-8 text-center text-[13px] text-[var(--color-text-secondary)]">
-                      {profile.status_message || (
-                        <span className="text-[var(--color-text-muted)]">
-                          상태메시지를 작성해주세요
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (editingStatus) {
-                        saveStatus();
-                        return;
-                      }
-                      track("status_edit_click", { user_id: profile.id });
-                      setStatusDraft(profile.status_message ?? "");
-                      setEditingStatus(true);
-                    }}
-                    className="absolute right-4 shrink-0"
-                    aria-label={
-                      editingStatus ? "상태메시지 저장" : "상태메시지 수정"
-                    }
-                  >
-                    <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
-                      <path
-                        d="M9.5 2.5 11.5 4.5M2 12l.5-3.5L9.5 2l3 3L5.5 11.5 2 12Z"
-                        stroke="#9A9A9A"
-                        strokeWidth="1.2"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                {atStatusLimit ? (
-                  <p className="mt-2 text-center text-[12px] font-medium text-[#E53935]">
-                    최대 18자까지만 작성이 가능해요
-                  </p>
+                  <FigmaImage
+                    src="/images/figma/icon-share-home.svg"
+                    alt=""
+                    width={16}
+                    height={16}
+                    className="h-4 w-4"
+                  />
+                </button>
+                {showShareTip ? (
+                  <div className="absolute -bottom-12 left-1/2 z-20 -translate-x-1/2">
+                    <GuideTooltip
+                      arrow="top"
+                      emoji={null}
+                      onClose={dismissShareTip}
+                    >
+                      내 쪽지함 링크를 공유하고 쪽지를 받아보세요!
+                    </GuideTooltip>
+                  </div>
                 ) : null}
               </div>
+
+              <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-[var(--color-text-placeholder)]">
+                <span>받은 횟수 {profile.received_count ?? 0}</span>
+                <span className="text-[var(--color-border)]">|</span>
+                <span>보낸 횟수 {profile.sent_count ?? 0}</span>
+              </div>
+
+              <StatusSpeechBubble
+                editing={editingStatus}
+                inputRef={statusInputRef}
+                value={statusDraft}
+                maxLength={STATUS_MESSAGE_MAX}
+                placeholder="상태메세지를 입력해주세요"
+                disabled={statusSaving}
+                error={atStatusLimit}
+                onChange={setStatusDraft}
+                onSave={() => void saveStatus()}
+                onStartEdit={startEditStatus}
+              >
+                {profile.status_message || (
+                  <span className="text-[var(--color-text-placeholder)]">
+                    상태메세지를 입력해주세요
+                  </span>
+                )}
+              </StatusSpeechBubble>
+              {atStatusLimit ? (
+                <p className="mt-2 text-center text-[12px] font-medium text-[#E53935]">
+                  18자까지 입력할 수 있어요.
+                </p>
+              ) : null}
             </>
           ) : profilePending ? (
             <ProfileHeaderSkeleton />
@@ -419,7 +503,7 @@ export default function HomePage() {
           onChange={(id) => setTab(id as Tab)}
         />
 
-        <section className="relative flex min-h-0 flex-1 flex-col bg-[var(--color-bg-content)] px-5 pb-14 pt-4">
+        <section className="relative flex min-h-0 flex-1 flex-col bg-[var(--color-bg-content)] px-5 pb-4 pt-4">
           <p className="mb-3 text-[12px] text-[var(--color-text-muted)]">
             {tab === "received"
               ? "받은 쪽지는 나만 볼 수 있어요"
@@ -457,10 +541,10 @@ export default function HomePage() {
                 }
                 description={
                   tab === "received"
-                    ? "내 쪽지함을 공유해 보세요!"
+                    ? "쪽지함을 공유하고 쪽지를 받아보세요!"
                     : "소중한 마음을 보내보세요!"
                 }
-                imageSrc="/images/empty-letter.png"
+                imageSrc="/images/figma/icon-empty-letter.svg"
               />
             ) : (
               <ul className="space-y-3">
@@ -485,24 +569,6 @@ export default function HomePage() {
               </button>
             ) : null}
           </div>
-
-          {profile ? (
-            <button
-              type="button"
-              onClick={() => copyHomeLink(profile)}
-              className="absolute bottom-0 left-0 right-0 flex h-10 items-center justify-center gap-2 rounded-b-[10px] bg-[var(--color-primary)] text-[16px] text-white"
-            >
-              내 쪽지함 공유하기
-              <Image
-                src="/images/icon-share.png"
-                alt=""
-                width={16}
-                height={16}
-                className="h-4 w-4"
-                aria-hidden
-              />
-            </button>
-          ) : null}
         </section>
       </div>
 

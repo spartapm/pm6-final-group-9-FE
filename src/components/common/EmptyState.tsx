@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { PrimaryButton } from "@/components/ui/Button";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 
 type EmptyStateProps = {
   title: string;
@@ -20,13 +20,19 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10 text-center">
-      <Image src={imageSrc} alt="" width={65} height={57} className="h-[57px] w-[65px]" aria-hidden />
+      <FigmaImage
+        src={imageSrc}
+        alt=""
+        width={65}
+        height={57}
+        className="h-[57px] w-[65px] object-contain opacity-40"
+      />
       <div className="leading-[1.6]">
-        <p className="text-[15px] font-medium text-[var(--color-text-muted)]">
+        <p className="text-[17px] text-[rgba(27,31,38,0.72)] tracking-[-1px]">
           {title}
         </p>
         {description ? (
-          <p className="text-[15px] font-medium text-[var(--color-text-muted)]">
+          <p className="text-[17px] text-[rgba(27,31,38,0.72)] tracking-[-1px]">
             {description}
           </p>
         ) : null}

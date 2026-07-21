@@ -26,10 +26,14 @@ export default function ClaimLetterPage() {
       }
 
       try {
-        const res = await apiFetch<{ data: Letter }>(
-          `/letters/claim/${params.token}`,
-          { method: "POST" }
-        );
+        const res = await apiFetch<{
+          data: Letter;
+          view?: "received" | "sent";
+        }>(`/letters/claim/${params.token}`, { method: "POST" });
+        if (res.view === "sent") {
+          router.replace(`/letters/sent/${res.data.id}`);
+          return;
+        }
         router.replace(`/letters/received/${res.data.id}`);
       } catch (e) {
         if (e instanceof ApiError && e.status === 403) {

@@ -20,6 +20,7 @@ export type Letter = {
   delivery_type: "direct" | "link";
   read_at: string | null;
   is_hidden: boolean;
+  is_onboarding?: boolean;
   created_at: string;
   reaction?: string | null;
   is_opened?: boolean;
@@ -34,6 +35,10 @@ export type LetterDraft = {
   isAnonymous: boolean;
   entryPath: "receiver_home" | "sender_home";
   guideCategory?: string | null;
+  replyToLetterId?: string | null;
+  toLocked?: boolean;
+  fromLocked?: boolean;
+  completeBackPath?: string | null;
 };
 
 export type EntryPath = "DIRECT" | "MESSAGE_READ" | "MESSAGE_WRITE";

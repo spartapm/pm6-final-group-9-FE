@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-const description = "다정한 마음이 도착했어요!";
-
 export const metadata: Metadata = {
   title: "구구레터",
-  description,
+  description: "친구에게 도착한 쪽지를 확인해 보세요",
   openGraph: {
     title: "구구레터",
-    description,
+    description: "친구에게 도착한 쪽지를 확인해 보세요",
     images: [
       {
         url: "/images/og-cover.png",
@@ -21,7 +19,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "구구레터",
-    description,
+    description: "친구에게 도착한 쪽지를 확인해 보세요",
     images: ["/images/og-cover.png"],
   },
 };

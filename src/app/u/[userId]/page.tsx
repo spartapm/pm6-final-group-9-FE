@@ -1,14 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { WriteLetterForm } from "@/components/letter/WriteLetterForm";
+import { StatusSpeechBubble } from "@/components/common/StatusSpeechBubble";
 import { ProfileHeaderSkeleton } from "@/components/common/ContentSkeleton";
 import { ApiError } from "@/lib/api-client";
 import { ErrorState } from "@/components/common/ErrorState";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 import { track } from "@/lib/analytics";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { usePublicProfile } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 
@@ -20,24 +22,16 @@ function FriendHomeHeader() {
         className="absolute left-5 flex h-9 w-9 items-center justify-center"
         aria-label="홈으로"
       >
-        <Image
-          src="/images/icon-home-back.png"
+        <FigmaImage
+          src="/images/figma/icon-home-back.svg"
           alt=""
-          width={31}
-          height={28}
-          className="h-[28px] w-[31px]"
-          aria-hidden
+          width={18}
+          height={18}
+          className="h-[18px] w-[18px] object-contain"
         />
       </Link>
       <Link href="/home" aria-label="구구레터 홈">
-        <Image
-          src="/images/logo-gugu-letter-gray.png"
-          alt="GUGU LETTER"
-          width={150}
-          height={16}
-          className="h-4 w-[150px]"
-          priority
-        />
+        <span className="logo-gugu-letter-sm text-[18px]">GUGU LETTER</span>
       </Link>
     </header>
   );
@@ -45,8 +39,13 @@ function FriendHomeHeader() {
 
 export default function PublicHomePage() {
   const params = useParams<{ userId: string }>();
-  const { data: profile, error, isPending } = usePublicProfile(params.userId);
+  const { data: profile, error, isPending, refetch } = usePublicProfile(
+    params.userId
+  );
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { refreshing, distance, indicatorStyle } = usePullToRefresh({
+    onRefresh: () => refetch(),
+  });
 
   const publicPath = `/u/${params.userId}`;
 
@@ -74,25 +73,38 @@ export default function PublicHomePage() {
         : null;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)] pb-8">
+    <main className="flex min-h-screen flex-col overflow-hidden bg-[var(--color-bg-content)] pb-8">
+      <div
+        className="flex items-center justify-center overflow-hidden text-[12px] text-[var(--color-text-muted)] transition-all"
+        style={indicatorStyle}
+        aria-hidden={!refreshing && distance < 8}
+      >
+        {refreshing || distance >= 40
+          ? "새로고침 중…"
+          : distance > 8
+            ? "당겨서 새로고침"
+            : null}
+      </div>
       <FriendHomeHeader />
 
       {errorMessage && !profile ? (
         <ErrorState title={errorMessage} homeHref="/login" />
       ) : (
         <>
-          <section className="px-6 pb-5 pt-4">
+          <section className="px-6 pb-2 pt-2">
             {profile ? (
               <>
                 <h1 className="text-center text-[18px] tracking-[-0.5px] text-[var(--color-text-secondary)]">
-                  <span className="font-semibold text-black">{profile.nickname}</span>
+                  <span className="font-semibold text-black">
+                    {profile.nickname}
+                  </span>
                   의 쪽지함
                 </h1>
 
                 {profile.status_message ? (
-                  <p className="mt-4 rounded-full border border-[var(--color-border-light)] bg-white px-4 py-2.5 text-center text-[13px] leading-snug text-[var(--color-text-secondary)]">
+                  <StatusSpeechBubble showEdit={false}>
                     {profile.status_message}
-                  </p>
+                  </StatusSpeechBubble>
                 ) : null}
               </>
             ) : isPending ? (
@@ -108,12 +120,12 @@ export default function PublicHomePage() {
               returnUrl={publicPath}
               completeBackPath={publicPath}
               showTitle={false}
+              toLocked
               submitLabel={
                 isLoggedIn
-                  ? "친구에게 쪽지 써주기"
-                  : "로그인하고 쪽지 보내기"
+                  ? "쪽지 보내기"
+                  : "카카오로 로그인하고 쪽지 보내기"
               }
-              showSubmitIcon
             />
           ) : null}
         </>

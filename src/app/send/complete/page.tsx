@@ -1,55 +1,48 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { BottomNav, mainTabPaddingClass } from "@/components/layout/BottomNav";
+import { GuideTooltip } from "@/components/common/GuideTooltip";
 import { toast } from "@/components/common/Toast";
-
-function HomeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M3 8.5 10 2l7 6.5V17a1 1 0 0 1-1 1h-4.5v-5.5H8.5V18H4a1 1 0 0 1-1-1V8.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import { PrimaryButton } from "@/components/ui/Button";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 
 function CompleteContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get("type") ?? "link";
   const shareUrl = searchParams.get("url");
   const backHref = searchParams.get("back") ?? "/home";
+  const [copying, setCopying] = useState(false);
+
+  async function copyLink() {
+    if (!shareUrl || copying) return;
+    setCopying(true);
+    toast("링크를 복사하고 있어요", { variant: "loading" });
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast("링크가 복사되었습니다", { variant: "success" });
+    } catch {
+      toast("링크 복사에 실패했어요. 다시 시도해주세요.", { variant: "error" });
+    } finally {
+      setCopying(false);
+    }
+  }
 
   async function shareLink() {
     if (!shareUrl) return;
 
-    const shareData = {
-      title: "구구레터",
-      text: "소중한 마음을 전해요",
-      url: shareUrl,
-    };
-
     try {
       if (navigator.share) {
-        await navigator.share(shareData);
+        await navigator.share({ url: shareUrl });
         return;
       }
-      await navigator.clipboard.writeText(shareUrl);
-      toast("링크가 복사되었어요.");
+      await copyLink();
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return;
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast("링크가 복사되었어요.");
-      } catch {
-        toast("공유에 실패했어요. 다시 시도해주세요.");
-      }
+      await copyLink();
     }
   }
 
@@ -64,13 +57,12 @@ function CompleteContent() {
 
         <div className="flex flex-1 flex-col px-[34px] pb-10 pt-16">
           <div className="flex flex-1 flex-col items-center justify-center">
-            <Image
-              src="/images/success-gugu.png"
+            <FigmaImage
+              src="/images/figma/success-gugu.svg"
               alt="구구"
               width={132}
               height={111}
-              className="mb-10 h-auto w-[132px]"
-              priority
+              className="mb-10 h-auto w-[132px] object-contain"
             />
             <p className="text-center text-[18px] font-medium leading-relaxed text-black">
               쪽지가 잘 전해졌어요 !
@@ -79,7 +71,7 @@ function CompleteContent() {
 
           <Link
             href="/home?tab=sent"
-            className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#2C2C2C] text-[18px] font-bold text-white"
+            className="flex h-14 w-full items-center justify-center rounded-2xl bg-[var(--color-primary-dark)] text-[18px] font-bold text-white"
           >
             내가 보낸 쪽지함으로 가기
           </Link>
@@ -89,44 +81,64 @@ function CompleteContent() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)] px-[34px] pb-10 pt-24">
-      <div className="flex flex-1 flex-col items-center">
-        <Image
-          src="/images/success-gugu.png"
-          alt="구구"
-          width={132}
-          height={111}
-          className="mb-10 h-auto w-[132px]"
-          priority
-        />
-        <p className="text-center text-[18px] font-medium leading-relaxed text-black">
-          구구가 소중한 마음을
-          <br />
-          전해드려요
-        </p>
+    <main
+      className={`flex min-h-screen flex-col bg-[var(--color-bg-content)] ${mainTabPaddingClass}`}
+    >
+      <AppHeader backHref="/write" backLabel="" variant="content" />
+
+      <div className="flex flex-1 flex-col px-[34px] pb-8 pt-4">
+        <div className="flex flex-1 flex-col items-center">
+          <FigmaImage
+            src="/images/figma/success-gugu.svg"
+            alt="구구"
+            width={132}
+            height={111}
+            className="mb-6 h-auto w-[132px] object-contain"
+          />
+          <p className="text-center text-[20px] font-semibold leading-[1.5] tracking-[-0.22px] text-[#484848]">
+            구구가 소중한 마음을 전해드려요
+          </p>
+
+          {shareUrl ? (
+            <div className="relative mt-10 w-full max-w-[325px]">
+              <div className="mb-3 flex justify-center">
+                <GuideTooltip arrow="bottom" emoji="✉️">
+                  링크를 복사해 쪽지를 보내주세요!
+                </GuideTooltip>
+              </div>
+              <button
+                type="button"
+                onClick={copyLink}
+                disabled={copying}
+                className="flex h-[53px] w-full items-center justify-center overflow-hidden rounded-2xl bg-white px-4"
+              >
+                <span className="truncate text-[18px] text-black">
+                  {shareUrl}
+                </span>
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-8 space-y-4">
+          <p className="text-center text-[15px] text-black">
+            공유하지 않으면 보내지지 않아요
+          </p>
+
+          <PrimaryButton onClick={shareLink}>
+            친구에게 쪽지 링크로 보내기
+          </PrimaryButton>
+
+          <Link
+            href="/home"
+            className="block text-center text-[15px] text-black underline underline-offset-2"
+          >
+            홈으로 돌아가기
+          </Link>
+        </div>
       </div>
 
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={shareLink}
-          className="h-14 w-full rounded-2xl bg-[#2C2C2C] text-[18px] font-bold text-white"
-        >
-          친구에게 쪽지 링크로 보내기
-        </button>
-
-        <p className="text-center text-[13px] text-[#929292]">
-          친구에게 공유하지 않으면 보내지지 않아요
-        </p>
-
-        <Link
-          href="/home"
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#474747] bg-white text-[18px] font-bold text-[#474747]"
-        >
-          <HomeIcon />
-          홈으로 돌아가기
-        </Link>
-      </div>
+      <BottomNav />
     </main>
   );
 }

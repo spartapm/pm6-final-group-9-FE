@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const SPLASH_MS = 2200;
+const SPLASH_MS = 1400;
 
 export function SplashScreen({
   onComplete,

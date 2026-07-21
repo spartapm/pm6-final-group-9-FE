@@ -106,7 +106,7 @@ export function OnboardingScreen() {
               <h1 className="mt-5 text-[22px] font-bold leading-snug text-[var(--color-text-body)]">
                 {slide.title}
               </h1>
-              <div className="mt-3 space-y-0.5 text-sm leading-relaxed text-[var(--color-text-muted)]">
+              <div className="mt-3 text-center text-[15px] font-normal leading-[146%] tracking-[-0.75px] text-[var(--color-text)]">
                 {slide.lines.map((line) => (
                   <p key={line}>{line}</p>
                 ))}

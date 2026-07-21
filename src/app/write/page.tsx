@@ -38,7 +38,6 @@ function WriteContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-[var(--color-bg-content)]">
-      <div className="h-4 shrink-0" />
       <div className={`min-h-0 flex-1 overflow-y-auto ${mainTabPaddingClass}`}>
         <WriteLetterForm
           receiverId={null}

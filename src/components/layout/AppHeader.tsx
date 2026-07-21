@@ -1,17 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 
 function HeaderLogo() {
   return (
     <Link href="/home" aria-label="GUGU LETTER 홈">
-      <Image
-        src="/images/logo-gugu-letter.png"
-        alt="GUGU LETTER"
-        width={148}
-        height={16}
-        className="h-auto w-[148px]"
-        priority
-      />
+      <span className="logo-gugu-letter-sm text-[18px]">GUGU LETTER</span>
     </Link>
   );
 }
@@ -58,34 +51,30 @@ export function AppHeader({
             <button
               type="button"
               onClick={onBack}
-              className="flex shrink-0 items-center gap-1 text-sm font-medium text-[var(--color-text-secondary)]"
+              className="flex shrink-0 items-center gap-1 text-[14px] font-semibold tracking-[-0.15px] text-black"
             >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <path
-                  d="M12 4 6 10l6 6"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {backLabel}
+              <FigmaImage
+                src="/images/figma/icon-back-ios.svg"
+                alt=""
+                width={24}
+                height={24}
+                className="h-6 w-6"
+              />
+              {backLabel || null}
             </button>
           ) : backHref ? (
             <Link
               href={backHref}
-              className="flex shrink-0 items-center gap-1 text-sm font-medium text-[var(--color-text-secondary)]"
+              className="flex shrink-0 items-center gap-1 text-[14px] font-semibold tracking-[-0.15px] text-black"
             >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <path
-                  d="M12 4 6 10l6 6"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {backLabel}
+              <FigmaImage
+                src="/images/figma/icon-back-ios.svg"
+                alt=""
+                width={24}
+                height={24}
+                className="h-6 w-6"
+              />
+              {backLabel || null}
             </Link>
           ) : showLogo ? (
             <HeaderLogo />
@@ -114,8 +103,8 @@ export function AppHeader({
             className="flex h-9 w-9 items-center justify-center"
             aria-label="설정"
           >
-            <Image
-              src="/images/icon-settings.png"
+            <FigmaImage
+              src="/images/figma/icon-settings.svg"
               alt=""
               width={20}
               height={20}

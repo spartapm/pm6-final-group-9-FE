@@ -5,9 +5,10 @@ import "./globals.css";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "700"],
   variable: "--font-sans",
   display: "swap",
+  preload: true,
 });
 
 function resolveMetadataBase(): URL {
@@ -27,10 +28,10 @@ function resolveMetadataBase(): URL {
 export const metadata: Metadata = {
   metadataBase: resolveMetadataBase(),
   title: "구구레터",
-  description: "소중한 마음을 전하는 쪽지",
+  description: "친구에게 마음을 쪽지로 전하는 구구레터",
   openGraph: {
     title: "구구레터",
-    description: "소중한 마음을 전하는 쪽지",
+    description: "친구에게 마음을 쪽지로 전하는 구구레터",
     images: [
       {
         url: "/images/og-cover.png",
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "구구레터",
-    description: "소중한 마음을 전하는 쪽지",
+    description: "친구에게 마음을 쪽지로 전하는 구구레터",
     images: ["/images/og-cover.png"],
   },
 };

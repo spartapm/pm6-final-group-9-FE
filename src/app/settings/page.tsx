@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/common/Toast";
 import { track } from "@/lib/analytics";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { FigmaImage } from "@/components/ui/FigmaImage";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { queryKeys, useMyProfile } from "@/lib/queries";
 import type { Profile } from "@/types";
 
@@ -19,7 +21,10 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurSaveRef = useRef(false);
-  const { data: profile, error: profileError } = useMyProfile();
+  const { data: profile, error: profileError, refetch } = useMyProfile();
+  const { refreshing, distance, indicatorStyle } = usePullToRefresh({
+    onRefresh: () => refetch(),
+  });
   const [nickname, setNickname] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -144,7 +149,18 @@ export default function SettingsPage() {
   const showLimitWarning = isEditing && nickname.length >= NICKNAME_MAX;
 
   return (
-    <main className="flex min-h-screen flex-col bg-white">
+    <main className="flex min-h-screen flex-col overflow-hidden bg-white">
+      <div
+        className="flex items-center justify-center overflow-hidden text-[12px] text-[#787878] transition-all"
+        style={indicatorStyle}
+        aria-hidden={!refreshing && distance < 8}
+      >
+        {refreshing || distance >= 40
+          ? "새로고침 중…"
+          : distance > 8
+            ? "당겨서 새로고침"
+            : null}
+      </div>
       <AppHeader backHref="/home" backLabel="" />
 
       <div className="flex flex-1 flex-col px-8 pb-10 pt-8">
@@ -179,7 +195,7 @@ export default function SettingsPage() {
                     });
                   }
                 }}
-                className={`min-w-0 flex-1 bg-transparent text-center text-[18px] font-medium text-black outline-none ${
+                className={`min-w-0 flex-1 bg-transparent text-center text-[20px] font-semibold tracking-[-1px] text-black outline-none ${
                   isEditing ? "cursor-text" : "cursor-default"
                 }`}
               />
@@ -187,20 +203,19 @@ export default function SettingsPage() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handlePencilClick}
-                className="shrink-0"
+                className="flex h-10 w-10 shrink-0 items-center justify-center"
                 aria-label={isEditing ? "닉네임 저장" : "닉네임 수정"}
               >
-                <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
-                  <path
-                    d="M9.5 2.5 11.5 4.5M2 12l.5-3.5L9.5 2l3 3L5.5 11.5 2 12Z"
-                    stroke="#9A9A9A"
-                    strokeWidth="1.2"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <FigmaImage
+                  src="/images/figma/icon-edit-pencil.svg"
+                  alt=""
+                  width={16}
+                  height={16}
+                  className="h-4 w-4"
+                />
               </button>
             </div>
-            <div className="mt-2 h-px w-full bg-[#D4D4D4]" />
+            <div className="mt-2 h-px w-[168px] mx-auto bg-[var(--color-border)]" />
           </div>
 
           {showLimitWarning ? (
@@ -215,46 +230,40 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="mt-16 flex flex-col items-center space-y-3">
+        <div className="mt-16 flex flex-col items-center space-y-3.5">
           <Link
             href="/settings/terms"
-            className="flex h-[45px] w-[80%] items-center justify-center rounded-xl border border-[#D4D4D4] bg-white text-[13px] font-bold text-black"
+            className="flex h-[39px] w-[233px] items-center justify-center rounded-2xl border border-[#EBEBEB] bg-white text-[14px] font-semibold text-[#353535]"
           >
             서비스 약관 및 방침
           </Link>
           <button
             type="button"
             onClick={handleInquiry}
-            className="flex h-[45px] w-[80%] items-center justify-center rounded-xl border border-[#D4D4D4] bg-white text-[13px] font-bold text-black"
+            className="flex h-[39px] w-[233px] items-center justify-center rounded-2xl border border-[#EBEBEB] bg-white text-[14px] font-semibold text-[#353535]"
           >
             문의하기
           </button>
         </div>
 
-        <p className="mt-8 text-center text-[14px] text-black">
-          <span className="font-medium">버전 정보</span>{" "}
-          <span className="text-black">0.1.0</span>
+        <p className="mt-10 flex items-baseline justify-center gap-2 text-center">
+          <span className="text-[14px] font-semibold text-[#353535]">
+            버전 정보
+          </span>
+          <span className="text-[12px] font-semibold text-[#9C9C9C]">0.1.0</span>
         </p>
 
-        <div className="mt-auto pt-16 text-center text-[14px] font-medium text-black">
-          <button
-            type="button"
-            onClick={() => setLogoutOpen(true)}
-            className="text-black"
-          >
+        <div className="mt-auto pt-16 text-center text-[16px] font-bold text-[var(--color-primary)]">
+          <button type="button" onClick={() => setLogoutOpen(true)}>
             로그아웃
           </button>
-          <span className="mx-3 text-[#D4D4D4]">|</span>
-          <button
-            type="button"
-            onClick={() => setWithdrawOpen(true)}
-            className="text-black"
-          >
+          <span className="mx-4 inline-block h-[21px] w-px bg-[rgba(60,60,67,0.36)] align-middle opacity-50" />
+          <button type="button" onClick={() => setWithdrawOpen(true)}>
             탈퇴하기
           </button>
         </div>
 
-        <p className="mt-6 text-center text-[11px] text-[#C5C5C5]">
+        <p className="mt-6 text-center text-[12px] font-semibold text-[#C6C6C6]">
           Copyright(c) 구구레터. All rights reserved
         </p>
       </div>
@@ -308,7 +317,7 @@ function ConfirmModal({
             type="button"
             disabled={busy}
             onClick={onConfirm}
-            className="flex-1 rounded-xl bg-[#474747] py-3 text-sm font-semibold text-white disabled:opacity-70"
+            className="flex-1 rounded-xl bg-[var(--color-primary)] py-3 text-sm font-semibold text-white disabled:opacity-70"
           >
             {busy ? "처리 중…" : "예"}
           </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 
 export type ToastVariant = "default" | "loading" | "success" | "error";
 
@@ -49,20 +50,13 @@ function ToastIcon({ variant }: { variant: ToastVariant }) {
 
   if (variant === "success") {
     return (
-      <span
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#4DA3FF]"
-        aria-hidden
-      >
-        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-          <path
-            d="M1 4.2 3.6 6.8 9 1.2"
-            stroke="white"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
+      <FigmaImage
+        src="/images/figma/icon-check-fill.svg"
+        alt=""
+        width={20}
+        height={20}
+        className="h-5 w-5 shrink-0"
+      />
     );
   }
 
@@ -92,14 +86,15 @@ export function ToastHost() {
 
   if (!message) return null;
 
-  const showIcon = message.variant !== "default";
+  const showIcon =
+    message.variant === "success" ||
+    message.variant === "loading" ||
+    message.variant === "error";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[120px] z-50 flex justify-center px-6">
       <div
-        className={`flex max-w-[340px] items-center gap-2.5 rounded-full bg-[#2B2B2B] px-4 py-3 text-[14px] font-medium leading-snug text-white shadow-[0_4px_16px_rgba(0,0,0,0.18)] ${
-          showIcon ? "" : "px-5"
-        }`}
+        className="flex h-14 w-full max-w-[360px] items-center gap-3 rounded-2xl bg-[var(--color-primary-dark)] px-6 text-[16px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
         role="status"
         aria-live="polite"
       >

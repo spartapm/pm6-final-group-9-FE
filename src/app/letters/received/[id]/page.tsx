@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,8 +11,10 @@ import { redirectToOnboarding } from "@/lib/auth-redirect";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { toast } from "@/components/common/Toast";
 import { track } from "@/lib/analytics";
-import { useReceivedLetter, queryKeys } from "@/lib/queries";
+import { useMyProfile, useReceivedLetter, queryKeys } from "@/lib/queries";
+import { LetterPaperCard } from "@/components/letter/LetterPaperCard";
 import { ShareableLetterCard, preloadShareAssets, SHARE_CARD_CAPTURE_OPTIONS } from "@/components/letter/ShareableLetterCard";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 import { REACTION_LABELS, REACTION_OPTIONS, type Letter } from "@/types";
 
 type ReceivedListCache = {
@@ -76,25 +77,6 @@ function ConfirmModal({
   );
 }
 
-function ReceivedLetterCard({
-  senderLabel,
-  content,
-}: {
-  senderLabel: string;
-  content: string;
-}) {
-  return (
-    <article className="w-full rounded-[16px] border border-black bg-white px-6 py-5">
-      <p className="text-[18px] font-semibold text-[#1F1F1F]">
-        From. {senderLabel}
-      </p>
-      <p className="mt-4 whitespace-pre-wrap text-[14px] leading-[1.5] tracking-[-0.32px] text-[#191F28]">
-        {content}
-      </p>
-    </article>
-  );
-}
-
 export default function ReceivedDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -107,13 +89,15 @@ export default function ReceivedDetailPage() {
     refetch,
     isPending,
   } = useReceivedLetter(params.id);
+  const { data: me } = useMyProfile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reaction, setReaction] = useState<string | null>(null);
-  const [reactionOpen, setReactionOpen] = useState(false);
+  // 상세 진입 시 감정 이모지 답장 영역을 펼친 상태로 노출
+  const [reactionOpen, setReactionOpen] = useState(true);
 
   useEffect(() => {
     if (letter) {
@@ -249,7 +233,6 @@ export default function ReceivedDetailPage() {
         await navigator.share({
           files: [file],
           title: "구구레터",
-          text: "소중한 쪽지를 공유해요",
         });
         track("share_card_external_share_sheet_open", {
           letter_id: letter.id,
@@ -274,27 +257,28 @@ export default function ReceivedDetailPage() {
       ? "익명"
       : letter.sender_nickname
     : "";
+  const toLabel =
+    letter?.receiver_nickname?.trim() || me?.nickname || "나";
   const activeReaction = letter
     ? (reaction ?? letter.reaction ?? null)
     : null;
+  const hideReply = Boolean(letter?.is_onboarding);
 
   return (
     <main className="flex h-[100dvh] flex-col bg-[var(--color-bg-content)]">
       <header className="sticky top-0 z-30 flex min-h-14 shrink-0 items-center bg-[var(--color-bg-content)] px-3 pt-[env(safe-area-inset-top)]">
         <Link
           href="/home"
-          className="flex h-10 w-10 items-center justify-center text-[#474747]"
+          className="flex h-10 w-10 items-center justify-center"
           aria-label="뒤로"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M14.5 5 8 11.5 14.5 18"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <FigmaImage
+            src="/images/figma/icon-back-ios.svg"
+            alt=""
+            width={24}
+            height={24}
+            className="h-6 w-6"
+          />
         </Link>
 
         {letter ? (
@@ -342,9 +326,11 @@ export default function ReceivedDetailPage() {
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">
           <div className="w-full -translate-y-5">
             {letter ? (
-              <ReceivedLetterCard
-                senderLabel={senderLabel}
+              <LetterPaperCard
+                toLabel={toLabel}
+                fromLabel={senderLabel}
                 content={letter.content}
+                footer={`${formatReceivedDate(letter.created_at)} 받음`}
               />
             ) : isPending ? (
               <LetterDetailSkeleton />
@@ -355,13 +341,12 @@ export default function ReceivedDetailPage() {
           {reactionOpen ? (
             <section className="rounded-[17px] bg-[rgba(232,232,232,0.76)] px-4 pb-5 pt-4">
               <div className="flex items-start gap-2">
-                <Image
+                <FigmaImage
                   src="/images/icon-face-add.svg"
                   alt=""
                   width={19}
                   height={19}
                   className="mt-0.5 h-[19px] w-[19px]"
-                  aria-hidden
                 />
                 <div>
                   <p className="text-[12px] font-medium tracking-[-0.24px] text-black">
@@ -411,13 +396,12 @@ export default function ReceivedDetailPage() {
                   onClick={() => setReactionOpen(true)}
                   className="inline-flex items-center gap-2 rounded-full bg-[#2C2C2C] px-4 py-2"
                 >
-                  <Image
+                  <FigmaImage
                     src="/images/icon-face-add.svg"
                     alt=""
                     width={19}
                     height={19}
                     className="h-[19px] w-[19px] invert"
-                    aria-hidden
                   />
                   <span className="text-[12px] font-medium tracking-[-0.24px] text-white">
                     감정 이모지로 답장하기
@@ -426,9 +410,6 @@ export default function ReceivedDetailPage() {
               )}
 
               <div className="flex shrink-0 items-center gap-2 pt-1">
-                <p className="text-[12px] font-medium text-[#787878]">
-                  {formatReceivedDate(letter.created_at)}
-                </p>
                 <button
                   type="button"
                   disabled={generating}
@@ -438,17 +419,16 @@ export default function ReceivedDetailPage() {
                 >
                   {generating ? (
                     <span
-                      className="h-4 w-4 animate-spin rounded-full border-2 border-[#C5C5C5] border-t-[#474747]"
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-text-disabled)] border-t-[var(--color-primary)]"
                       aria-hidden
                     />
                   ) : (
-                    <Image
+                    <FigmaImage
                       src="/images/icon-share-external.svg"
                       alt=""
                       width={18}
                       height={18}
                       className="h-[18px] w-[18px]"
-                      aria-hidden
                     />
                   )}
                 </button>
@@ -510,6 +490,17 @@ export default function ReceivedDetailPage() {
               닫기
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {letter && !hideReply ? (
+        <div className="shrink-0 border-t border-[var(--color-border-light)] bg-white px-0 pb-[env(safe-area-inset-bottom)]">
+          <Link
+            href={`/letters/received/${letter.id}/reply`}
+            className="flex h-[66px] w-full items-center justify-center text-[16px] font-semibold text-[var(--color-text)]"
+          >
+            답장하기
+          </Link>
         </div>
       ) : null}
 

@@ -22,6 +22,8 @@ export function useMyProfile(enabled = true) {
     queryFn: () =>
       apiFetch<{ data: Profile }>("/profiles/me").then((r) => r.data),
     enabled,
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
   });
 }
 
@@ -39,6 +41,9 @@ export function useLetters(tab: "received" | "sent", enabled = true) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled,
+    refetchOnWindowFocus: true,
+    refetchInterval: enabled ? 30_000 : false,
+    staleTime: 15_000,
   });
 }
 

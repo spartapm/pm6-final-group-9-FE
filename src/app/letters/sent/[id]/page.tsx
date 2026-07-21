@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LetterDetailSkeleton } from "@/components/common/ContentSkeleton";
 import { ErrorState } from "@/components/common/ErrorState";
+import { LetterPaperCard } from "@/components/letter/LetterPaperCard";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 import { redirectToOnboarding } from "@/lib/auth-redirect";
 import { ApiError } from "@/lib/api-client";
 import { useSentLetter } from "@/lib/queries";
@@ -21,42 +23,21 @@ function formatLetterDate(iso: string) {
   return `${date} ${time}`;
 }
 
-function SentLetterCard({
-  receiverLabel,
-  content,
-}: {
-  receiverLabel: string;
-  content: string;
-}) {
-  return (
-    <article className="w-full rounded-[16px] border border-black bg-white px-6 py-5">
-      <p className="text-[18px] font-semibold text-[#1F1F1F]">
-        To. {receiverLabel}
-      </p>
-      <p className="mt-4 whitespace-pre-wrap text-[14px] leading-[1.5] tracking-[-0.32px] text-[#191F28]">
-        {content}
-      </p>
-    </article>
-  );
-}
-
 function DetailHeader() {
   return (
     <header className="sticky top-0 z-30 flex min-h-14 shrink-0 items-center bg-[var(--color-bg-content)] px-3 pt-[env(safe-area-inset-top)]">
       <Link
         href="/home?tab=sent"
-        className="flex h-10 w-10 items-center justify-center text-[#474747]"
+        className="flex h-10 w-10 items-center justify-center"
         aria-label="뒤로"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M14.5 5 8 11.5 14.5 18"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <FigmaImage
+          src="/images/figma/icon-back-ios.svg"
+          alt=""
+          width={24}
+          height={24}
+          className="h-6 w-6"
+        />
       </Link>
     </header>
   );
@@ -112,8 +93,9 @@ export default function SentDetailPage() {
       <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-8">
         <div className="w-full -translate-y-5">
           {letter ? (
-            <SentLetterCard
-              receiverLabel={receiverLabel}
+            <LetterPaperCard
+              toLabel={receiverLabel}
+              fromLabel={letter.sender_nickname}
               content={letter.content}
             />
           ) : isPending ? (
@@ -124,11 +106,11 @@ export default function SentDetailPage() {
             <div className="mt-6 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 {unreadMessage ? (
-                  <p className="text-[14px] font-medium text-[#929292]">
+                  <p className="text-[14px] font-medium text-[var(--color-text-muted)]">
                     {unreadMessage}
                   </p>
                 ) : letter.reaction ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#191F28] px-3 py-2 text-[14px] font-semibold text-white">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-letter-ink)] px-3 py-2 text-[14px] font-semibold text-white">
                     <span className="text-[19px] leading-none">
                       {letter.reaction}
                     </span>
@@ -137,7 +119,7 @@ export default function SentDetailPage() {
                 ) : null}
               </div>
 
-              <p className="shrink-0 pt-1 text-[12px] font-medium text-[#787878]">
+              <p className="shrink-0 pt-1 text-[12px] font-medium text-[var(--color-text-secondary)]">
                 {formatLetterDate(letter.created_at)}
               </p>
             </div>

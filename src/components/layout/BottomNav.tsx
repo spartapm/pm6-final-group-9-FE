@@ -1,14 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FigmaImage } from "@/components/ui/FigmaImage";
 
 type NavItem = {
   href: string;
   label: string;
   iconSrc: string;
-  iconInactiveSrc: string;
   match?: (path: string) => boolean;
 };
 
@@ -16,18 +15,14 @@ const items: NavItem[] = [
   {
     href: "/home",
     label: "쪽지함",
-    iconSrc: "/images/icon-inbox-tab.png",
-    iconInactiveSrc: "/images/icon-inbox-tab-inactive.png",
+    iconSrc: "/images/figma/icon-inbox-nav.svg",
     match: (p) =>
-      p === "/home" ||
-      p.startsWith("/letters/") ||
-      p === "/settings",
+      p === "/home" || p.startsWith("/letters/") || p === "/settings",
   },
   {
     href: "/write",
     label: "쪽지 보내기",
-    iconSrc: "/images/icon-send-tab.png",
-    iconInactiveSrc: "/images/icon-send-tab-inactive.png",
+    iconSrc: "/images/figma/icon-send-nav.svg",
     match: (p) => p.startsWith("/write") || p.startsWith("/send/"),
   },
 ];
@@ -49,16 +44,17 @@ export function BottomNav() {
                 className={`flex w-full flex-col items-center justify-center gap-1 py-1 text-[14px] font-medium tracking-[-0.5px] transition ${
                   active
                     ? "text-[var(--color-text-secondary)]"
-                    : "text-[var(--color-text-secondary)] opacity-50"
+                    : "text-[var(--color-nav-inactive)]"
                 }`}
               >
-                <Image
-                  src={active ? item.iconSrc : item.iconInactiveSrc}
+                <FigmaImage
+                  src={item.iconSrc}
                   alt=""
                   width={20}
                   height={20}
-                  className="h-5 w-5"
-                  aria-hidden
+                  className={`h-5 w-5 object-contain ${
+                    active ? "opacity-100" : "opacity-45"
+                  }`}
                 />
                 {item.label}
               </Link>

@@ -37,7 +37,7 @@ export function TabBar({ tabs, activeId, onChange }: TabBarProps) {
           );
         })}
       </div>
-      <div className="relative h-0.5 bg-[#ECECEC]">
+      <div className="relative h-0.5 bg-[var(--color-border-tab)]">
         <span
           className="absolute top-0 h-0.5 bg-black transition-all duration-200"
           style={{

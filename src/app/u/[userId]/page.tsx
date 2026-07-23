@@ -30,8 +30,14 @@ function FriendHomeHeader() {
           className="h-[18px] w-[18px] object-contain"
         />
       </Link>
-      <Link href="/home" aria-label="구구레터 홈">
-        <span className="logo-gugu-letter-sm text-[18px]">GUGU LETTER</span>
+      <Link href="/home" aria-label="구구레터 홈" className="inline-flex items-center">
+        <FigmaImage
+          src="/images/logo-gugu-letter-header.png"
+          alt="GUGU LETTER"
+          width={160}
+          height={17}
+          className="h-[17px] w-auto object-contain"
+        />
       </Link>
     </header>
   );

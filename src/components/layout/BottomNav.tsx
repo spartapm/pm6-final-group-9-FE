@@ -8,6 +8,7 @@ type NavItem = {
   href: string;
   label: string;
   iconSrc: string;
+  activeIconSrc?: string;
   match?: (path: string) => boolean;
 };
 
@@ -15,7 +16,8 @@ const items: NavItem[] = [
   {
     href: "/home",
     label: "쪽지함",
-    iconSrc: "/images/figma/icon-inbox-nav.svg",
+    iconSrc: "/images/figma/icon-inbox-nav-inactive.png",
+    activeIconSrc: "/images/figma/icon-inbox-nav-active.png",
     match: (p) =>
       p === "/home" || p.startsWith("/letters/") || p === "/settings",
   },
@@ -37,6 +39,8 @@ export function BottomNav() {
           const active = item.match
             ? item.match(pathname)
             : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const iconSrc =
+            active && item.activeIconSrc ? item.activeIconSrc : item.iconSrc;
           return (
             <li key={item.href} className="flex flex-1">
               <Link
@@ -48,12 +52,14 @@ export function BottomNav() {
                 }`}
               >
                 <FigmaImage
-                  src={item.iconSrc}
+                  src={iconSrc}
                   alt=""
                   width={20}
-                  height={20}
-                  className={`h-5 w-5 object-contain ${
-                    active ? "opacity-100" : "opacity-45"
+                  height={25}
+                  className={`object-contain ${
+                    item.activeIconSrc
+                      ? "h-[22px] w-[18px]"
+                      : `h-5 w-5 ${active ? "opacity-100" : "opacity-45"}`
                   }`}
                 />
                 {item.label}

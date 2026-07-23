@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { GuideTooltip } from "@/components/common/GuideTooltip";
+import { toast } from "@/components/common/Toast";
 import { FigmaImage } from "@/components/ui/FigmaImage";
 import { KakaoButton, PrimaryButton } from "@/components/ui/Button";
 import { useDraftStore } from "@/lib/draft-store";
@@ -119,19 +120,42 @@ export function WriteLetterForm({
     textareaRef.current?.focus();
   }
 
+  function resolveTargetReceiverId() {
+    if (receiverId) return receiverId;
+    const existing = useDraftStore.getState().draft;
+    if (
+      existing?.entryPath === "receiver_home" &&
+      existing.receiverId
+    ) {
+      return existing.receiverId;
+    }
+    return null;
+  }
+
   function saveDraftAndGoPreview(goLogin: boolean) {
+    // 로그인 복귀 경합으로 내 홈(/write)에 떨어졌을 때도 친구홈 초안 맥락을 유지한다
+    const existing = useDraftStore.getState().draft;
+    const keepFriendHome =
+      !receiverId &&
+      existing?.entryPath === "receiver_home" &&
+      Boolean(existing.receiverId);
+    const nextReceiverId = keepFriendHome ? existing!.receiverId : receiverId;
+    const nextEntryPath = keepFriendHome ? "receiver_home" : entryPath;
+
     setDraft({
-      receiverId,
+      receiverId: nextReceiverId,
       receiverNickname: toNickname.trim(),
       content: content.trim(),
       senderNickname: senderNickname.trim(),
       isAnonymous: false,
-      entryPath,
+      entryPath: nextEntryPath,
       guideCategory: null,
       replyToLetterId,
-      toLocked: toLocked || isFriendHome,
+      toLocked: toLocked || isFriendHome || keepFriendHome,
       fromLocked,
-      completeBackPath: completeBackPath ?? null,
+      completeBackPath:
+        completeBackPath ??
+        (keepFriendHome && nextReceiverId ? `/u/${nextReceiverId}` : null),
     });
 
     if (goLogin) {
@@ -142,8 +166,20 @@ export function WriteLetterForm({
     router.push("/write/preview");
   }
 
-  function onSubmit() {
+  async function onSubmit() {
     if (!canProceed) return;
+
+    const targetReceiverId = resolveTargetReceiverId();
+    if (targetReceiverId) {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user && user.id === targetReceiverId) {
+        toast("나에게는 쪽지를 보낼 수 없어요.");
+        return;
+      }
+    }
 
     if (guestFriendHome) {
       saveDraftAndGoPreview(true);

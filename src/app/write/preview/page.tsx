@@ -18,18 +18,20 @@ export default function WritePreviewPage() {
   const router = useRouter();
   const draft = useDraftStore((s) => s.draft);
   const clearDraft = useDraftStore((s) => s.clearDraft);
+  const hasHydrated = useDraftStore((s) => s.hasHydrated);
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
 
   useEffect(() => {
     // 전송 완료 후 clearDraft로 draft가 비워질 때 /write로 튕기지 않도록 가드
-    if (sendingRef.current) return;
+    if (!hasHydrated || sendingRef.current) return;
     if (!draft?.content || !draft.senderNickname) {
       router.replace("/write");
     }
-  }, [draft, router]);
+  }, [draft, router, hasHydrated]);
 
-  if (!draft?.content || !draft.senderNickname) {
+  // persist 재수화 전/초기에 draft가 비어 있으면 빈 화면만 보여 경합 리다이렉트를 막는다
+  if (!hasHydrated || !draft?.content || !draft.senderNickname) {
     return (
       <main className="min-h-screen bg-[var(--color-bg-content)]" aria-busy />
     );
@@ -37,8 +39,13 @@ export default function WritePreviewPage() {
 
   const toLabel = draft.receiverNickname?.trim() || "친구";
   const fromLabel = draft.senderNickname.trim();
+  // receiverId가 있으면 친구 홈/직접 발송으로 취급 (로그인 복귀 후 플로우 오염 방지)
+  const isDirectToFriend = Boolean(draft.receiverId);
+  const resolvedEntryPath = isDirectToFriend
+    ? "receiver_home"
+    : draft.entryPath;
   const backHref =
-    draft.entryPath === "receiver_home" && draft.receiverId
+    resolvedEntryPath === "receiver_home" && draft.receiverId
       ? `/write?to=${draft.receiverId}&name=${encodeURIComponent(toLabel)}`
       : draft.replyToLetterId
         ? `/letters/received/${draft.replyToLetterId}`
@@ -60,6 +67,17 @@ export default function WritePreviewPage() {
         return;
       }
 
+      if (draft.receiverId && user.id === draft.receiverId) {
+        toast("나에게는 쪽지를 보낼 수 없어요.");
+        sendingRef.current = false;
+        setSending(false);
+        return;
+      }
+
+      const entryPath = draft.receiverId
+        ? "receiver_home"
+        : draft.entryPath;
+
       const res = await apiFetch<{
         data: { letter: Letter; shareUrl: string | null };
       }>("/letters", {
@@ -70,14 +88,14 @@ export default function WritePreviewPage() {
           senderNickname: draft.senderNickname,
           receiverNickname: draft.receiverNickname,
           isAnonymous: false,
-          entryPath: draft.entryPath,
+          entryPath,
           replyToLetterId: draft.replyToLetterId ?? null,
         }),
       });
 
       track("card_write_complete", {
         letter_id: res.data.letter.id,
-        entry_path: draft.entryPath,
+        entry_path: entryPath,
       });
 
       clearDraft();

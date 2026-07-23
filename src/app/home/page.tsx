@@ -84,6 +84,12 @@ export default function HomePage() {
     isPending: lettersPending,
   } = useLetters(tab, authChecked && Boolean(profile));
 
+  // 탭과 무관하게 받은 쪽지 unread 상태를 유지 (같은 queryKey면 자동 dedupe)
+  const { data: receivedLettersData } = useLetters(
+    "received",
+    authChecked && Boolean(profile)
+  );
+
   useLettersRealtime(profile?.id, authChecked && Boolean(profile));
 
   const onPullRefresh = useCallback(async () => {
@@ -96,8 +102,9 @@ export default function HomePage() {
   });
 
   const letters = flattenLetters(lettersData);
-  const hasUnread =
-    tab === "received" && letters.some((letter) => !letter.read_at);
+  const hasUnread = flattenLetters(receivedLettersData).some(
+    (letter) => !letter.read_at
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

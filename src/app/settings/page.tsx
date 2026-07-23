@@ -49,9 +49,23 @@ export default function SettingsPage() {
   }
 
   function startEditing() {
+    if (!profile || saving) return;
+
     setNickname((current) => clampNickname(current));
     setIsEditing(true);
-    requestAnimationFrame(() => inputRef.current?.focus());
+
+    // iOS는 readOnly/비동기 focus로는 키보드를 열지 않음.
+    // 유저 제스처 스택 안에서 동기적으로 잠금 해제 + focus 해야 함.
+    const el = inputRef.current;
+    if (!el) return;
+    el.readOnly = false;
+    el.focus({ preventScroll: true });
+    const len = el.value.length;
+    try {
+      el.setSelectionRange(len, len);
+    } catch {
+      // some input types may not support selection APIs
+    }
   }
 
   async function saveNickname(rawValue?: string) {
@@ -165,13 +179,22 @@ export default function SettingsPage() {
 
       <div className="flex flex-1 flex-col px-8 pb-10 pt-8">
         <div className="flex flex-col items-center">
-          <div className="relative w-full max-w-[280px]">
+          <div
+            className="relative w-full max-w-[280px] cursor-text"
+            onPointerDown={(e) => {
+              if (isEditing || !profile || saving) return;
+              if ((e.target as HTMLElement).closest("button")) return;
+              startEditing();
+            }}
+          >
             <div className="relative flex items-center justify-center">
               <input
                 ref={inputRef}
                 value={nickname}
                 readOnly={!isEditing || !profile}
                 disabled={saving || !profile}
+                inputMode="text"
+                enterKeyHint="done"
                 onChange={(e) => {
                   if (!isEditing) return;
                   setNickname(clampNickname(e.target.value));
@@ -196,8 +219,9 @@ export default function SettingsPage() {
                   }
                 }}
                 className={`mx-auto -my-3 w-[calc(100%-104px)] bg-transparent py-3 text-center text-[20px] font-semibold tracking-[-1px] text-black outline-none ${
-                  isEditing ? "cursor-text" : "cursor-default"
+                  isEditing ? "cursor-text" : "cursor-pointer"
                 }`}
+                aria-label="닉네임"
               />
               <button
                 type="button"
@@ -215,7 +239,7 @@ export default function SettingsPage() {
                 />
               </button>
             </div>
-            <div className="mt-2 h-px w-[168px] mx-auto bg-[var(--color-border)]" />
+            <div className="mx-auto mt-2 h-px w-[168px] bg-[var(--color-border)]" />
           </div>
 
           {showLimitWarning ? (

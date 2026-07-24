@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toPng } from "html-to-image";
 import { LetterDetailSkeleton } from "@/components/common/ContentSkeleton";
@@ -16,7 +15,6 @@ import { useMyProfile, useReceivedLetter, queryKeys } from "@/lib/queries";
 import { LetterPaperCard } from "@/components/letter/LetterPaperCard";
 import { ShareableLetterCard, preloadShareAssets, SHARE_CARD_CAPTURE_OPTIONS } from "@/components/letter/ShareableLetterCard";
 import { FigmaImage } from "@/components/ui/FigmaImage";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { REACTION_LABELS, REACTION_OPTIONS, type Letter } from "@/types";
 
 type ReceivedListCache = {
@@ -79,37 +77,6 @@ function ConfirmModal({
   );
 }
 
-/** POP-01: 저장 실패 안내 */
-function AlertModal({
-  title,
-  description,
-  onConfirm,
-}: {
-  title: string;
-  description?: string;
-  onConfirm: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-6">
-      <div className="mx-auto w-[80%] max-w-[300px] rounded-[20px] bg-white p-6 text-center">
-        <p className="text-base font-bold text-black">{title}</p>
-        {description ? (
-          <p className="mt-2 text-sm leading-relaxed text-[#787878]">
-            {description}
-          </p>
-        ) : null}
-        <button
-          type="button"
-          onClick={onConfirm}
-          className="mt-6 w-full rounded-xl bg-[#474747] py-3 text-sm font-semibold text-white"
-        >
-          확인
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function ReceivedDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -126,9 +93,6 @@ export default function ReceivedDetailPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const savingRef = useRef(false);
-  const [saveFailOpen, setSaveFailOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reaction, setReaction] = useState<string | null>(null);
@@ -251,63 +215,22 @@ export default function ReceivedDetailPage() {
     }
   }
 
-  function beginSavingUi() {
-    if (savingRef.current) return false;
-    savingRef.current = true;
-    // 동기 커밋으로 버튼 라벨/스피너를 즉시 DOM에 반영
-    flushSync(() => {
-      setSaving(true);
-    });
-    return true;
-  }
-
-  function endSavingUi() {
-    savingRef.current = false;
-    setSaving(false);
-  }
-
-  /** rAF만으로는 모바일에서 페인트 전에 메인스레드가 막힐 수 있어 macrotask로 양보 */
-  function afterLoadingPaint(run: () => void) {
-    window.setTimeout(run, 50);
-  }
-
-  async function ensureMinSavingVisible(startedAt: number, minMs = 400) {
-    const elapsed = Date.now() - startedAt;
-    if (elapsed < minMs) {
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, minMs - elapsed);
-      });
-    }
-  }
-
   async function downloadShareCard() {
     if (!letter || generating) return;
-    if (!beginSavingUi()) return;
-
-    afterLoadingPaint(() => {
-      void (async () => {
-        const startedAt = Date.now();
-        try {
-          const dataUrl = await captureShareCard();
-          if (!dataUrl) {
-            throw new Error("capture_empty");
-          }
-          await persistImage(dataUrl);
-          await ensureMinSavingVisible(startedAt);
-          // POP-04
-          toast("이미지를 저장했어요.");
-          track("share_card_save_complete", { letter_id: letter.id });
-        } catch {
-          setSaveFailOpen(true);
-          track("share_card_external_share_fail", {
-            letter_id: letter.id,
-            error_code: "save_fail",
-          });
-        } finally {
-          endSavingUi();
-        }
-      })();
-    });
+    setGenerating(true);
+    try {
+      const dataUrl = await captureShareCard();
+      if (!dataUrl) return;
+      saveImage(dataUrl);
+    } catch {
+      toast("이미지를 저장하지 못했어요. 다시 시도해주세요.");
+      track("share_card_external_share_fail", {
+        letter_id: letter.id,
+        error_code: "save_fail",
+      });
+    } finally {
+      setGenerating(false);
+    }
   }
 
   async function dataUrlToFile(dataUrl: string) {
@@ -315,61 +238,17 @@ export default function ReceivedDetailPage() {
     return new File([blob], "guguletter.png", { type: "image/png" });
   }
 
-  async function persistImage(dataUrl: string) {
-    // 메인 스레드 양보 후 디코드 (로딩 UI 페인트 보장)
-    await new Promise<void>((resolve) => {
-      window.setTimeout(resolve, 0);
-    });
-    const blob = await (await fetch(dataUrl)).blob();
-    if (!blob.size) {
-      throw new Error("empty_blob");
-    }
-    const objectUrl = URL.createObjectURL(blob);
-    try {
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = "guguletter.png";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } finally {
-      URL.revokeObjectURL(objectUrl);
-    }
-  }
-
-  /** 공유 카드 미리보기에서 저장하기 */
-  function saveFromPreview() {
-    if (!letter || !previewUrl) return;
-    if (!beginSavingUi()) return;
-
-    const url = previewUrl;
-    afterLoadingPaint(() => {
-      void (async () => {
-        const startedAt = Date.now();
-        try {
-          await persistImage(url);
-          await ensureMinSavingVisible(startedAt);
-          setPreviewUrl(null);
-          // POP-04
-          toast("이미지를 저장했어요.");
-          track("share_card_save_complete", { letter_id: letter.id });
-        } catch {
-          // POP-01 — 버튼 원상복구 후 팝업, 미리보기 유지
-          setSaveFailOpen(true);
-          track("share_card_external_share_fail", {
-            letter_id: letter.id,
-            error_code: "save_fail",
-          });
-        } finally {
-          endSavingUi();
-        }
-      })();
-    });
+  function saveImage(dataUrl: string) {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "guguletter.png";
+    a.click();
+    toast("이미지를 저장했어요.");
+    if (letter) track("share_card_save_complete", { letter_id: letter.id });
   }
 
   async function shareImage() {
-    if (!letter || !previewUrl || sharing || savingRef.current) return;
+    if (!letter || !previewUrl || sharing) return;
     setSharing(true);
     try {
       const file = await dataUrlToFile(previewUrl);
@@ -382,10 +261,7 @@ export default function ReceivedDetailPage() {
           letter_id: letter.id,
         });
       } else {
-        await persistImage(previewUrl);
-        setPreviewUrl(null);
-        toast("이미지를 저장했어요.");
-        track("share_card_save_complete", { letter_id: letter.id });
+        saveImage(previewUrl);
       }
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return;
@@ -563,13 +439,16 @@ export default function ReceivedDetailPage() {
                     <div className="flex shrink-0 items-center gap-3">
                       <button
                         type="button"
-                        disabled={generating || saving}
+                        disabled={generating}
                         onClick={() => void downloadShareCard()}
                         className="flex h-8 w-8 items-center justify-center disabled:opacity-50"
                         aria-label="이미지 저장"
                       >
-                        {saving ? (
-                          <LoadingSpinner className="text-[var(--color-primary)]" />
+                        {generating ? (
+                          <span
+                            className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-text-disabled)] border-t-[var(--color-primary)]"
+                            aria-hidden
+                          />
                         ) : (
                           <FigmaImage
                             src="/images/figma/icon-download.svg"
@@ -582,22 +461,18 @@ export default function ReceivedDetailPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={generating || saving}
+                        disabled={generating}
                         onClick={() => void openSharePreview()}
                         className="flex h-8 w-8 items-center justify-center disabled:opacity-50"
                         aria-label="이미지로 공유하기"
                       >
-                        {generating ? (
-                          <LoadingSpinner className="text-[var(--color-primary)]" />
-                        ) : (
-                          <FigmaImage
-                            src="/images/figma/icon-share-nodes.svg"
-                            alt=""
-                            width={16}
-                            height={18}
-                            className="h-[18px] w-4"
-                          />
-                        )}
+                        <FigmaImage
+                          src="/images/figma/icon-share-nodes.svg"
+                          alt=""
+                          width={16}
+                          height={18}
+                          className="h-[18px] w-4"
+                        />
                       </button>
                     </div>
                   </div>
@@ -623,11 +498,7 @@ export default function ReceivedDetailPage() {
             type="button"
             className="absolute inset-0"
             aria-label="미리보기 닫기"
-            disabled={saving}
-            onClick={() => {
-              if (saving) return;
-              setPreviewUrl(null);
-            }}
+            onClick={() => setPreviewUrl(null)}
           />
           <div className="relative z-10 flex w-full max-w-[320px] flex-col items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -639,26 +510,15 @@ export default function ReceivedDetailPage() {
             <div className="mt-5 flex w-full gap-2">
               <button
                 type="button"
-                disabled={saving || sharing}
-                aria-busy={saving}
-                onClick={saveFromPreview}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/70 bg-white/10 py-3 text-sm font-semibold text-white ${
-                  saving || sharing ? "pointer-events-none opacity-70" : ""
-                }`}
+                onClick={() => saveImage(previewUrl)}
+                className="flex-1 rounded-xl border border-white/70 bg-white/10 py-3 text-sm font-semibold text-white"
               >
-                {saving ? (
-                  <>
-                    <span>저장중</span>
-                    <LoadingSpinner className="text-white" />
-                  </>
-                ) : (
-                  "저장하기"
-                )}
+                이미지 저장
               </button>
               <button
                 type="button"
-                disabled={sharing || saving}
-                onClick={() => void shareImage()}
+                disabled={sharing}
+                onClick={shareImage}
                 className="flex-1 rounded-xl bg-white py-3 text-sm font-semibold text-[#242429] disabled:opacity-70"
               >
                 {sharing ? "공유 중…" : "공유하기"}
@@ -666,22 +526,13 @@ export default function ReceivedDetailPage() {
             </div>
             <button
               type="button"
-              disabled={saving}
               onClick={() => setPreviewUrl(null)}
-              className="mt-3 text-sm font-medium text-white/80 disabled:opacity-50"
+              className="mt-3 text-sm font-medium text-white/80"
             >
               닫기
             </button>
           </div>
         </div>
-      ) : null}
-
-      {saveFailOpen ? (
-        <AlertModal
-          title="저장에 실패했어요"
-          description="다시 시도해주세요."
-          onConfirm={() => setSaveFailOpen(false)}
-        />
       ) : null}
 
       {letter && !hideReply ? (

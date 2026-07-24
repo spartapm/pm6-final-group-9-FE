@@ -79,3 +79,17 @@ button:disabled {
   letter-spacing: 0.02em;
   color: var(--color-logo);
 }
+
+@keyframes loading-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner-ring {
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  animation: loading-spinner-rotate 0.8s linear infinite;
+  will-change: transform;
+}

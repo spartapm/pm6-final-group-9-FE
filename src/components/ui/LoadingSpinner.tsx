@@ -12,7 +12,7 @@ export function LoadingSpinner({
   return (
     <span
       aria-hidden
-      className={`inline-block shrink-0 rounded-full border-2 border-current/30 border-t-current [animation:spin_0.8s_linear_infinite] ${className}`}
+      className={`loading-spinner-ring inline-block shrink-0 rounded-full ${className}`}
       style={{ width: size, height: size }}
     />
   );

@@ -127,6 +127,7 @@ export default function ReceivedDetailPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [saveFailOpen, setSaveFailOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -250,29 +251,63 @@ export default function ReceivedDetailPage() {
     }
   }
 
-  async function downloadShareCard() {
-    if (!letter || generating || saving) return;
-    // 클릭 즉시 스피너 낙관적 표시 (페인트 후 저장 진행)
-    flushSync(() => setSaving(true));
-    await waitForPaint();
-    try {
-      const dataUrl = await captureShareCard();
-      if (!dataUrl) {
-        throw new Error("capture_empty");
-      }
-      await persistImage(dataUrl);
-      // POP-04: 목록(상세 위)에서 저장 완료 토스트
-      toast("이미지를 저장했어요.");
-      track("share_card_save_complete", { letter_id: letter.id });
-    } catch {
-      setSaveFailOpen(true);
-      track("share_card_external_share_fail", {
-        letter_id: letter.id,
-        error_code: "save_fail",
+  function beginSavingUi() {
+    if (savingRef.current) return false;
+    savingRef.current = true;
+    // 동기 커밋으로 버튼 라벨/스피너를 즉시 DOM에 반영
+    flushSync(() => {
+      setSaving(true);
+    });
+    return true;
+  }
+
+  function endSavingUi() {
+    savingRef.current = false;
+    setSaving(false);
+  }
+
+  /** rAF만으로는 모바일에서 페인트 전에 메인스레드가 막힐 수 있어 macrotask로 양보 */
+  function afterLoadingPaint(run: () => void) {
+    window.setTimeout(run, 50);
+  }
+
+  async function ensureMinSavingVisible(startedAt: number, minMs = 400) {
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < minMs) {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, minMs - elapsed);
       });
-    } finally {
-      setSaving(false);
     }
+  }
+
+  async function downloadShareCard() {
+    if (!letter || generating) return;
+    if (!beginSavingUi()) return;
+
+    afterLoadingPaint(() => {
+      void (async () => {
+        const startedAt = Date.now();
+        try {
+          const dataUrl = await captureShareCard();
+          if (!dataUrl) {
+            throw new Error("capture_empty");
+          }
+          await persistImage(dataUrl);
+          await ensureMinSavingVisible(startedAt);
+          // POP-04
+          toast("이미지를 저장했어요.");
+          track("share_card_save_complete", { letter_id: letter.id });
+        } catch {
+          setSaveFailOpen(true);
+          track("share_card_external_share_fail", {
+            letter_id: letter.id,
+            error_code: "save_fail",
+          });
+        } finally {
+          endSavingUi();
+        }
+      })();
+    });
   }
 
   async function dataUrlToFile(dataUrl: string) {
@@ -280,15 +315,11 @@ export default function ReceivedDetailPage() {
     return new File([blob], "guguletter.png", { type: "image/png" });
   }
 
-  function waitForPaint() {
-    return new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
-  }
-
   async function persistImage(dataUrl: string) {
+    // 메인 스레드 양보 후 디코드 (로딩 UI 페인트 보장)
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 0);
+    });
     const blob = await (await fetch(dataUrl)).blob();
     if (!blob.size) {
       throw new Error("empty_blob");
@@ -308,31 +339,37 @@ export default function ReceivedDetailPage() {
   }
 
   /** 공유 카드 미리보기에서 저장하기 */
-  async function saveFromPreview() {
-    if (!letter || !previewUrl || saving) return;
-    // 클릭 즉시 스피너 낙관적 표시 (페인트 후 저장 진행)
-    flushSync(() => setSaving(true));
-    await waitForPaint();
-    try {
-      await persistImage(previewUrl);
-      setPreviewUrl(null);
-      // POP-04
-      toast("이미지를 저장했어요.");
-      track("share_card_save_complete", { letter_id: letter.id });
-    } catch {
-      // POP-01 — 버튼 원상복구 후 팝업, 미리보기 유지
-      setSaveFailOpen(true);
-      track("share_card_external_share_fail", {
-        letter_id: letter.id,
-        error_code: "save_fail",
-      });
-    } finally {
-      setSaving(false);
-    }
+  function saveFromPreview() {
+    if (!letter || !previewUrl) return;
+    if (!beginSavingUi()) return;
+
+    const url = previewUrl;
+    afterLoadingPaint(() => {
+      void (async () => {
+        const startedAt = Date.now();
+        try {
+          await persistImage(url);
+          await ensureMinSavingVisible(startedAt);
+          setPreviewUrl(null);
+          // POP-04
+          toast("이미지를 저장했어요.");
+          track("share_card_save_complete", { letter_id: letter.id });
+        } catch {
+          // POP-01 — 버튼 원상복구 후 팝업, 미리보기 유지
+          setSaveFailOpen(true);
+          track("share_card_external_share_fail", {
+            letter_id: letter.id,
+            error_code: "save_fail",
+          });
+        } finally {
+          endSavingUi();
+        }
+      })();
+    });
   }
 
   async function shareImage() {
-    if (!letter || !previewUrl || sharing || saving) return;
+    if (!letter || !previewUrl || sharing || savingRef.current) return;
     setSharing(true);
     try {
       const file = await dataUrlToFile(previewUrl);
@@ -603,13 +640,16 @@ export default function ReceivedDetailPage() {
               <button
                 type="button"
                 disabled={saving || sharing}
-                onClick={() => void saveFromPreview()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/70 bg-white/10 py-3 text-sm font-semibold text-white disabled:opacity-70"
+                aria-busy={saving}
+                onClick={saveFromPreview}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/70 bg-white/10 py-3 text-sm font-semibold text-white ${
+                  saving || sharing ? "pointer-events-none opacity-70" : ""
+                }`}
               >
                 {saving ? (
                   <>
                     <span>저장중</span>
-                    <LoadingSpinner />
+                    <LoadingSpinner className="text-white" />
                   </>
                 ) : (
                   "저장하기"

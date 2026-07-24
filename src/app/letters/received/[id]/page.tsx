@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toPng } from "html-to-image";
 import { LetterDetailSkeleton } from "@/components/common/ContentSkeleton";
@@ -251,7 +252,9 @@ export default function ReceivedDetailPage() {
 
   async function downloadShareCard() {
     if (!letter || generating || saving) return;
-    setSaving(true);
+    // 클릭 즉시 스피너 낙관적 표시 (페인트 후 저장 진행)
+    flushSync(() => setSaving(true));
+    await waitForPaint();
     try {
       const dataUrl = await captureShareCard();
       if (!dataUrl) {
@@ -277,6 +280,14 @@ export default function ReceivedDetailPage() {
     return new File([blob], "guguletter.png", { type: "image/png" });
   }
 
+  function waitForPaint() {
+    return new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+  }
+
   async function persistImage(dataUrl: string) {
     const blob = await (await fetch(dataUrl)).blob();
     if (!blob.size) {
@@ -299,7 +310,9 @@ export default function ReceivedDetailPage() {
   /** 공유 카드 미리보기에서 저장하기 */
   async function saveFromPreview() {
     if (!letter || !previewUrl || saving) return;
-    setSaving(true);
+    // 클릭 즉시 스피너 낙관적 표시 (페인트 후 저장 진행)
+    flushSync(() => setSaving(true));
+    await waitForPaint();
     try {
       await persistImage(previewUrl);
       setPreviewUrl(null);
